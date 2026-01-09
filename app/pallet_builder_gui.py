@@ -592,10 +592,11 @@ class PalletBuilderGUI:
             self.pallet_exporter = None
             
             # Initialize CustomerManager (uses Excel file in CUSTOMERS folder)
+            # Defer loading to after UI is shown for faster startup
             customers_dir = project_root / "CUSTOMERS"
             customers_dir.mkdir(parents=True, exist_ok=True)
             customer_excel_file = customers_dir / "customers.xlsx"
-            self.customer_manager = CustomerManager(customer_excel_file)
+            self.customer_manager = CustomerManager(customer_excel_file, defer_load=True)
             
             return True
             
@@ -3225,6 +3226,10 @@ class PalletBuilderGUI:
                 self.pallet_manager._ensure_directory_structure()
                 # Load actual data
                 self.pallet_manager.data = self.pallet_manager.load_history()
+            
+            # Load CustomerManager data if it was deferred
+            if self.customer_manager and not self.customer_manager.customers:
+                self.customer_manager._load_customers()
             
             # Preload cache and run archiving after a short delay
             self.root.after(500, self._preload_cache)
