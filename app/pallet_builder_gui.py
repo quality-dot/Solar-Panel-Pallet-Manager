@@ -2765,35 +2765,38 @@ class PalletBuilderGUI:
         customer_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=customer_listbox.yview)
         
-        # Flag to prevent re-entry
-        refresh_in_progress = {'value': False}
+        # Flag to prevent re-entry and track call count for debugging
+        refresh_state = {'in_progress': False, 'call_count': 0}
         
         # Populate listbox
         def refresh_listbox():
             # Prevent re-entry (avoid infinite loop)
-            if refresh_in_progress['value']:
+            if refresh_state['in_progress']:
+                print(f"DEBUG: refresh_listbox blocked - already in progress")
                 return
             
-            refresh_in_progress['value'] = True
+            refresh_state['call_count'] += 1
+            if refresh_state['call_count'] > 10:
+                print(f"ERROR: refresh_listbox called {refresh_state['call_count']} times - stopping to prevent leak")
+                return
+            
+            refresh_state['in_progress'] = True
             try:
                 # Force reload customers from Excel file (bypass cache)
                 self.customer_manager.refresh_customers(force_reload=True)
                 customer_listbox.delete(0, tk.END)
                 for customer_name in self.customer_manager.get_customer_names():
                     customer_listbox.insert(tk.END, customer_name)
-                # Update customer menu on main window (force refresh)
-                # Only update if menu exists and dialog is still open
-                if self.active_customer_menu and dialog.winfo_exists():
-                    self._update_customer_menu(force_refresh=True)
+                # Don't update main menu here - it will be updated by caller if needed
             except Exception as e:
                 print(f"Error in refresh_listbox: {e}")
                 import traceback
                 traceback.print_exc()
             finally:
-                refresh_in_progress['value'] = False
+                refresh_state['in_progress'] = False
         
-        # Load customer list asynchronously to avoid blocking UI
-        dialog.after(10, refresh_listbox)
+        # Load customer list once on startup
+        dialog.after(10, lambda: (refresh_listbox(), self._update_customer_menu(force_refresh=True)))
         
         # Add Refresh button next to list
         refresh_list_btn = tk.Button(list_frame, text="🔄 Refresh", 
