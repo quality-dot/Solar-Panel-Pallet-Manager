@@ -1313,7 +1313,9 @@ class PalletHistoryWindow:
     
     def _on_customer_filter_changed(self, *args):
         """Handle customer filter change"""
-        self.load_history()
+        # Only load if tree widget exists (avoid error during initialization)
+        if hasattr(self, 'tree') and self.tree:
+            self.load_history()
     
     def _on_search_changed(self, *args):
         """Handle barcode search change (debounced)"""
