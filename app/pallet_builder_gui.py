@@ -59,15 +59,46 @@ class PalletBuilderGUI:
         self.root = root if root else tk.Tk()
         version = get_version()
         self.root.title(f"Pallet Manager - {version}")
-        self.root.geometry("700x600")
         
         # macOS-specific optimizations for better performance
         if platform.system() == 'Darwin':
             try:
                 # Disable automatic window tabbing on macOS (can cause slowness)
-                self.root.tk.call('::tk::unsupported::MacWindowStyle', 'style', self.root._w, 'document', 'closeBox collapseBox resizable')
+                # Include fullscreen button (zoomBox) for maximize functionality
+                self.root.tk.call('::tk::unsupported::MacWindowStyle', 'style', self.root._w, 'document', 'closeBox collapseBox resizable zoomBox')
             except Exception:
                 pass  # Ignore if this fails on older macOS versions
+        
+        # Start maximized/fullscreen on all platforms
+        try:
+            if platform.system() == 'Windows':
+                # Windows: use state zoomed
+                self.root.state('zoomed')
+            elif platform.system() == 'Darwin':
+                # macOS: maximize to full screen (not fullscreen mode, just maximized)
+                # Get screen dimensions
+                screen_width = self.root.winfo_screenwidth()
+                screen_height = self.root.winfo_screenheight()
+                # Set geometry to fill screen (accounting for menu bar and dock)
+                self.root.geometry(f"{screen_width}x{screen_height-100}+0+0")
+                # Alternative: use zoomed attribute (may not work on all macOS versions)
+                try:
+                    self.root.attributes('-zoomed', True)
+                except:
+                    pass
+            else:
+                # Linux: try zoomed state
+                try:
+                    self.root.attributes('-zoomed', True)
+                except:
+                    # Fallback: maximize manually
+                    screen_width = self.root.winfo_screenwidth()
+                    screen_height = self.root.winfo_screenheight()
+                    self.root.geometry(f"{screen_width}x{screen_height}+0+0")
+        except Exception as e:
+            # Fallback to default size if maximizing fails
+            print(f"Could not maximize window: {e}")
+            self.root.geometry("900x750")
         
         # Set window icon for taskbar (Windows) and dock (macOS)
         self._set_window_icon()
