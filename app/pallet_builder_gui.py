@@ -746,29 +746,54 @@ class PalletBuilderGUI:
         try:
             import shutil
             
+            # Debug logging for Windows troubleshooting
+            print("\n" + "="*70)
+            print("DEBUG: _ensure_reference_workbook() called")
+            print("="*70)
+            print(f"Excel directory: {excel_dir}")
+            print(f"Excel dir exists: {excel_dir.exists()}")
+            print(f"Is packaged: {is_packaged()}")
+            print(f"sys.executable: {sys.executable}")
+            if hasattr(sys, '_MEIPASS'):
+                print(f"sys._MEIPASS: {sys._MEIPASS}")
+            print("="*70)
+            
             # Check if any workbooks exist (excluding CURRENT.xlsx and temp files)
             existing_workbooks = list(excel_dir.glob("*.xlsx"))
             existing_workbooks = [f for f in existing_workbooks 
                                  if not f.name.startswith("~$") 
                                  and f.name != "CURRENT.xlsx"]
+            print(f"Existing workbooks in EXCEL: {[f.name for f in existing_workbooks]}")
             
             # Try to find reference workbook in packaged app
             reference_workbook = None
             
             # In packaged app, reference workbook is in reference_workbook/ subdirectory
             if is_packaged():
-                # For py2app (macOS): Resources are in Contents/Resources/
-                # Executable is in Contents/MacOS/, so go up one level then into Resources
-                exe_dir = Path(sys.executable).parent
-                resources_dir = exe_dir.parent / "Resources"
-                ref_path = resources_dir / "reference_workbook" / "BUILD 10-12-25.xlsx"
-                if ref_path.exists():
-                    reference_workbook = ref_path
-                else:
-                    # Fallback: Try _internal subdirectory (PyInstaller on Windows)
+                # PyInstaller (Windows/Linux): Check _MEIPASS (temp extraction dir for onefile)
+                if hasattr(sys, '_MEIPASS'):
+                    # PyInstaller onefile mode - data files extracted to temp dir
+                    meipass_path = Path(sys._MEIPASS) / "reference_workbook" / "BUILD 10-12-25.xlsx"
+                    if meipass_path.exists():
+                        reference_workbook = meipass_path
+                        print(f"Found reference workbook in _MEIPASS: {meipass_path}")
+                
+                # py2app (macOS): Resources are in Contents/Resources/
+                if not reference_workbook:
+                    exe_dir = Path(sys.executable).parent
+                    resources_dir = exe_dir.parent / "Resources"
+                    ref_path = resources_dir / "reference_workbook" / "BUILD 10-12-25.xlsx"
+                    if ref_path.exists():
+                        reference_workbook = ref_path
+                        print(f"Found reference workbook in Resources: {ref_path}")
+                
+                # Fallback: Try _internal subdirectory (PyInstaller onedir mode)
+                if not reference_workbook:
+                    exe_dir = Path(sys.executable).parent
                     internal_path = exe_dir / "_internal" / "reference_workbook" / "BUILD 10-12-25.xlsx"
                     if internal_path.exists():
                         reference_workbook = internal_path
+                        print(f"Found reference workbook in _internal: {internal_path}")
             
             # In development, check project EXCEL folder
             if not reference_workbook:
@@ -777,28 +802,54 @@ class PalletBuilderGUI:
                     reference_workbook = dev_excel
             
             # Copy reference workbook if no workbooks exist
+            print(f"\nChecking if we need to copy reference workbook...")
+            print(f"  existing_workbooks: {len(existing_workbooks)}")
+            print(f"  reference_workbook: {reference_workbook}")
+            print(f"  reference exists: {reference_workbook.exists() if reference_workbook else 'N/A'}")
+            
             if not existing_workbooks and reference_workbook and reference_workbook.exists():
                 # Copy BUILD workbook
                 build_target = excel_dir / "BUILD 10-12-25.xlsx"
                 if not build_target.exists():
+                    print(f"  → Copying BUILD workbook to: {build_target}")
                     shutil.copy2(reference_workbook, build_target)
-                    print(f"Copied reference workbook to: {build_target}")
+                    print(f"  ✅ Copied reference workbook successfully!")
+                else:
+                    print(f"  ℹ️  BUILD workbook already exists, skipping")
             
             # Always ensure CURRENT.xlsx exists (create it if missing)
             current_target = excel_dir / "CURRENT.xlsx"
+            print(f"\nChecking CURRENT.xlsx...")
+            print(f"  Target: {current_target}")
+            print(f"  Exists: {current_target.exists()}")
+            
             if not current_target.exists():
                 # Try to use reference workbook if available
                 if reference_workbook and reference_workbook.exists():
+                    print(f"  → Creating CURRENT.xlsx from reference workbook")
                     shutil.copy2(reference_workbook, current_target)
-                    print(f"Created CURRENT.xlsx from reference: {current_target}")
+                    print(f"  ✅ Created CURRENT.xlsx successfully!")
+                    print(f"     Size: {current_target.stat().st_size} bytes")
                 elif existing_workbooks:
                     # Use the most recent BUILD file if reference not available
                     latest_build = max(existing_workbooks, key=lambda p: p.stat().st_mtime)
+                    print(f"  → Creating CURRENT.xlsx from {latest_build.name}")
                     shutil.copy2(latest_build, current_target)
-                    print(f"Created CURRENT.xlsx from {latest_build.name}: {current_target}")
+                    print(f"  ✅ Created CURRENT.xlsx from existing BUILD file!")
+                else:
+                    print(f"  ❌ No reference workbook or existing BUILD files found!")
+            else:
+                print(f"  ℹ️  CURRENT.xlsx already exists, skipping")
+            
+            print("="*70 + "\n")
+            
         except Exception as e:
             # Log error but don't fail - user can add reference workbook manually
-            print(f"Note: Could not create CURRENT.xlsx: {e}")
+            print(f"\n❌ ERROR in _ensure_reference_workbook: {e}")
+            print(f"   Exception type: {type(e).__name__}")
+            import traceback
+            print(f"   Traceback:\n{traceback.format_exc()}")
+            print("="*70)
             print("You can manually add a reference workbook to the EXCEL folder.")
     
     def setup_ui(self):
