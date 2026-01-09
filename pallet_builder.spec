@@ -13,18 +13,55 @@ block_cipher = None
 
 # Get absolute paths for data files (more reliable on Windows)
 project_root = Path(__file__).parent
-excel_file = project_root / 'EXCEL' / 'BUILD 10-12-25.xlsx'
+excel_dir = project_root / 'EXCEL'
 icon_ico = project_root / 'icons' / 'PalletManager.ico'
 icon_icns = project_root / 'icons' / 'PalletManager.icns'
 
+# Find the BUILD workbook (handle different naming conventions)
+excel_file = None
+possible_names = [
+    'BUILD 10-12-25.xlsx',
+    'BUILD_10_12_25.xlsx',
+    'BUILD 10-12-25.xlsx',  # With different dash types
+]
+
+# Also search for any BUILD*.xlsx file
+for pattern in ['BUILD*.xlsx', 'Build*.xlsx', 'build*.xlsx']:
+    matches = list(excel_dir.glob(pattern))
+    if matches:
+        excel_file = matches[0]
+        break
+
+# If still not found, try the specific names
+if not excel_file:
+    for name in possible_names:
+        test_path = excel_dir / name
+        if test_path.exists():
+            excel_file = test_path
+            break
+
 # Verify files exist before building
-if not excel_file.exists():
-    print(f"ERROR: Reference workbook not found: {excel_file}")
+if not excel_file or not excel_file.exists():
+    print("=" * 70)
+    print("ERROR: Reference workbook not found!")
+    print("=" * 70)
     print(f"Current directory: {os.getcwd()}")
     print(f"Project root: {project_root}")
+    print(f"EXCEL directory: {excel_dir}")
+    print(f"EXCEL directory exists: {excel_dir.exists()}")
+    if excel_dir.exists():
+        print(f"Files in EXCEL directory:")
+        for f in excel_dir.glob('*'):
+            print(f"  - {f.name}")
+    print()
+    print("Expected one of:")
+    for name in possible_names:
+        print(f"  - {name}")
+    print("=" * 70)
     sys.exit(1)
 
-print(f"✓ Found reference workbook: {excel_file}")
+print(f"✓ Found reference workbook: {excel_file.name}")
+print(f"  Full path: {excel_file}")
 print(f"  Size: {excel_file.stat().st_size} bytes")
 
 # Check if reportlab is available (required for PDF creation)
