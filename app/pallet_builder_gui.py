@@ -139,27 +139,21 @@ class PalletBuilderGUI:
         self.active_customer_var: Optional[tk.StringVar] = None
         self.active_customer_menu: Optional[tk.OptionMenu] = None
         
-        # Check if this is first-time setup using a marker file
+        # Always show splash screen for professional startup experience
         project_root = get_base_dir()
-        excel_dir = project_root / "EXCEL"
         marker_file = project_root / ".initialized"
         is_first_launch = not marker_file.exists()
         
-        # Show loading screen on first launch (especially Windows)
+        # Show splash screen on every launch
+        self._show_splash_screen(is_first_launch)
+        
+        # Initialize after splash is shown
         if is_first_launch:
-            self._show_loading_screen()
-            # Initialize with progress updates
+            # First launch: detailed progress updates
             self.root.after(100, lambda: self._initialize_with_progress())
         else:
-            # Normal initialization
-            if self._initialize_components():
-                self.setup_ui()
-                self.start_new_pallet()
-                # Defer heavy workbook search to after UI is shown
-                self.root.after(100, self._find_workbook_async)
-            else:
-                # Initialization failed - show error in window instead of just dialog
-                self._show_init_error()
+            # Normal launch: quick initialization with splash
+            self.root.after(100, lambda: self._initialize_with_splash())
     
     def _set_window_icon(self):
         """Set the window icon for taskbar/dock and window title bar"""
@@ -266,85 +260,86 @@ class PalletBuilderGUI:
             import traceback
             traceback.print_exc()
     
-    def _show_loading_screen(self):
-        """Show loading screen with progress bar during first-time setup"""
-        # Create loading window (centered, on top)
-        loading_window = tk.Toplevel(self.root)
-        loading_window.title("Pallet Manager - Initializing")
-        loading_window.geometry("500x200")
-        loading_window.resizable(False, False)
+    def _show_splash_screen(self, is_first_launch: bool):
+        """Show splash screen on every launch"""
+        # Create splash window (centered, on top)
+        splash = tk.Toplevel(self.root)
+        splash.title("Pallet Manager")
+        splash.geometry("500x250")
+        splash.resizable(False, False)
+        
+        # Remove window decorations for cleaner look
+        splash.overrideredirect(True)
         
         # Center the window
-        loading_window.update_idletasks()
-        x = (loading_window.winfo_screenwidth() // 2) - (500 // 2)
-        y = (loading_window.winfo_screenheight() // 2) - (200 // 2)
-        loading_window.geometry(f"500x200+{x}+{y}")
+        splash.update_idletasks()
+        x = (splash.winfo_screenwidth() // 2) - (500 // 2)
+        y = (splash.winfo_screenheight() // 2) - (250 // 2)
+        splash.geometry(f"500x250+{x}+{y}")
         
         # Make it stay on top
-        loading_window.attributes("-topmost", True)
-        loading_window.transient(self.root)
-        loading_window.grab_set()
+        splash.attributes("-topmost", True)
         
         # Configure style
-        bg_color = "#f0f0f0"
-        loading_window.configure(bg=bg_color)
+        bg_color = "#2C3E50"
+        splash.config(bg=bg_color)
         
-        # Title
+        # Logo/Title
+        version = get_version()
+        
         title_label = tk.Label(
-            loading_window,
+            splash,
             text="Pallet Manager",
-            font=("Arial", 18, "bold"),
+            font=("Arial", 24, "bold"),
             bg=bg_color,
-            fg="#333"
+            fg="white"
         )
-        title_label.pack(pady=(20, 10))
+        title_label.pack(pady=(40, 10))
         
-        # Status message
-        self._loading_status = tk.StringVar(value="Initializing...")
+        version_label = tk.Label(
+            splash,
+            text=f"Version {version}",
+            font=("Arial", 12),
+            bg=bg_color,
+            fg="#BDC3C7"
+        )
+        version_label.pack(pady=(0, 30))
+        
+        # Loading message
+        status_text = "Initializing for first time..." if is_first_launch else "Loading..."
+        self._splash_status = tk.StringVar(value=status_text)
         status_label = tk.Label(
-            loading_window,
-            textvariable=self._loading_status,
+            splash,
+            textvariable=self._splash_status,
             font=("Arial", 11),
             bg=bg_color,
-            fg="#666"
+            fg="#ECF0F1"
         )
         status_label.pack(pady=(0, 15))
         
-        # Progress bar frame
-        progress_frame = tk.Frame(loading_window, bg=bg_color)
-        progress_frame.pack(fill=tk.X, padx=40, pady=10)
+        # Progress bar
+        progress_frame = tk.Frame(splash, bg=bg_color)
+        progress_frame.pack(pady=(0, 20), padx=40, fill=tk.X)
         
-        # Progress bar (simulated with canvas)
-        self._progress_canvas = tk.Canvas(
+        self._splash_canvas = tk.Canvas(
             progress_frame,
-            height=25,
-            bg="#e0e0e0",
-            highlightthickness=1,
-            highlightbackground="#999"
+            height=20,
+            bg="#34495E",
+            highlightthickness=0
         )
-        self._progress_canvas.pack(fill=tk.X)
+        self._splash_canvas.pack(fill=tk.X)
         
-        # Progress bar fill (starts at 0)
-        self._progress_width = 0
-        self._progress_max = 420  # Width of progress bar (500 - 40*2 padding)
+        # Progress bar fill
+        self._splash_progress = 0
+        self._splash_max = 420  # Width minus padding
         
-        # Version info
-        version = get_version()
-        version_label = tk.Label(
-            loading_window,
-            text=f"Version {version}",
-            font=("Arial", 9),
-            bg=bg_color,
-            fg="#999"
-        )
-        version_label.pack(pady=(10, 0))
-        
-        # Store reference for updates
-        self._loading_window = loading_window
-        self._progress_canvas_ref = self._progress_canvas
+        # Store reference
+        self._splash_window = splash
+        self._loading_window = splash  # Keep for compatibility
+        self._progress_canvas_ref = self._splash_canvas  # Keep for compatibility
         
         # Update display
-        loading_window.update()
+        splash.update()
     
     def _update_loading_progress(self, progress: int, message: str):
         """
@@ -354,29 +349,46 @@ class PalletBuilderGUI:
             progress: Progress percentage (0-100)
             message: Status message to display
         """
-        if hasattr(self, '_loading_status') and self._loading_status:
+        # Support both old and new variable names
+        if hasattr(self, '_splash_status') and self._splash_status:
+            self._splash_status.set(message)
+        elif hasattr(self, '_loading_status') and self._loading_status:
             self._loading_status.set(message)
         
-        if hasattr(self, '_progress_canvas_ref') and self._progress_canvas_ref:
+        canvas = None
+        if hasattr(self, '_splash_canvas') and self._splash_canvas:
+            canvas = self._splash_canvas
+        elif hasattr(self, '_progress_canvas_ref') and self._progress_canvas_ref:
+            canvas = self._progress_canvas_ref
+        
+        if canvas:
             # Calculate width based on progress
-            width = int((progress / 100.0) * self._progress_max)
-            width = max(0, min(width, self._progress_max))
+            width = int((progress / 100.0) * self._splash_max)
+            width = max(0, min(width, self._splash_max))
             
             # Clear and redraw progress bar
-            self._progress_canvas_ref.delete("all")
+            canvas.delete("all")
             if width > 0:
-                self._progress_canvas_ref.create_rectangle(
-                    0, 0, width, 25,
-                    fill="#4CAF50",
+                canvas.create_rectangle(
+                    0, 0, width, 20,
+                    fill="#3498DB",
                     outline=""
                 )
             
             # Update display
-            if hasattr(self, '_loading_window') and self._loading_window:
+            if hasattr(self, '_splash_window') and self._splash_window:
+                self._splash_window.update()
+            elif hasattr(self, '_loading_window') and self._loading_window:
                 self._loading_window.update()
     
     def _close_loading_screen(self):
         """Close the loading screen"""
+        if hasattr(self, '_splash_window') and self._splash_window:
+            try:
+                self._splash_window.destroy()
+            except Exception:
+                pass
+            self._splash_window = None
         if hasattr(self, '_loading_window') and self._loading_window:
             try:
                 self._loading_window.destroy()
@@ -463,6 +475,47 @@ class PalletBuilderGUI:
             # Setup main UI
             self.setup_ui()
             self.start_new_pallet()
+            
+            # Defer heavy workbook search
+            self.root.after(100, self._find_workbook_async)
+            
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            print("Full error traceback:")
+            print(error_details)
+            self._init_error = str(e)
+            self._close_loading_screen()
+            self._show_init_error()
+    
+    def _initialize_with_splash(self):
+        """Initialize components with splash screen (normal launch)"""
+        try:
+            # Step 1: Initialize components (0-70%)
+            self._update_loading_progress(10, "Loading components...")
+            
+            if not self._initialize_components():
+                self._close_loading_screen()
+                self._show_init_error()
+                return
+            
+            self._update_loading_progress(40, "Setting up interface...")
+            
+            # Step 2: Setup UI (70-90%)
+            self.setup_ui()
+            self._update_loading_progress(70, "Loading data...")
+            
+            # Step 3: Start new pallet (90-100%)
+            self.start_new_pallet()
+            self._update_loading_progress(90, "Finalizing...")
+            
+            # Brief pause to show completion
+            time.sleep(0.3)
+            self._update_loading_progress(100, "Ready!")
+            time.sleep(0.2)
+            
+            # Close splash and show main window
+            self._close_loading_screen()
             
             # Defer heavy workbook search
             self.root.after(100, self._find_workbook_async)
