@@ -17,50 +17,47 @@ excel_dir = project_root / 'EXCEL'
 icon_ico = project_root / 'icons' / 'PalletManager.ico'
 icon_icns = project_root / 'icons' / 'PalletManager.icns'
 
-# Find the BUILD workbook (handle different naming conventions)
+# Find a reference workbook - can be BUILD or CURRENT.xlsx
 excel_file = None
-possible_names = [
-    'BUILD 10-12-25.xlsx',
-    'BUILD_10_12_25.xlsx',
-    'BUILD 10-12-25.xlsx',  # With different dash types
-]
 
-# Also search for any BUILD*.xlsx file
+# Priority 1: Look for BUILD workbook (preferred for bundling)
 for pattern in ['BUILD*.xlsx', 'Build*.xlsx', 'build*.xlsx']:
     matches = list(excel_dir.glob(pattern))
     if matches:
         excel_file = matches[0]
+        print(f"✓ Found BUILD workbook: {excel_file.name}")
         break
 
-# If still not found, try the specific names
+# Priority 2: Fall back to CURRENT.xlsx if no BUILD file
 if not excel_file:
-    for name in possible_names:
-        test_path = excel_dir / name
-        if test_path.exists():
-            excel_file = test_path
-            break
+    current_xlsx = excel_dir / 'CURRENT.xlsx'
+    if current_xlsx.exists():
+        excel_file = current_xlsx
+        print(f"✓ Found CURRENT.xlsx (using as reference workbook)")
 
-# Verify files exist before building
+# Verify we found a reference workbook
 if not excel_file or not excel_file.exists():
     print("=" * 70)
-    print("ERROR: Reference workbook not found!")
+    print("ERROR: No reference workbook found!")
     print("=" * 70)
     print(f"Current directory: {os.getcwd()}")
     print(f"Project root: {project_root}")
     print(f"EXCEL directory: {excel_dir}")
     print(f"EXCEL directory exists: {excel_dir.exists()}")
     if excel_dir.exists():
-        print(f"Files in EXCEL directory:")
+        print(f"\nFiles in EXCEL directory:")
         for f in excel_dir.glob('*'):
             print(f"  - {f.name}")
     print()
-    print("Expected one of:")
-    for name in possible_names:
-        print(f"  - {name}")
+    print("Need at least ONE of:")
+    print("  - BUILD*.xlsx (any BUILD file)")
+    print("  - CURRENT.xlsx")
+    print()
+    print("The reference workbook is bundled in the app and copied")
+    print("to the user's EXCEL folder on first launch.")
     print("=" * 70)
     sys.exit(1)
 
-print(f"✓ Found reference workbook: {excel_file.name}")
 print(f"  Full path: {excel_file}")
 print(f"  Size: {excel_file.stat().st_size} bytes")
 
