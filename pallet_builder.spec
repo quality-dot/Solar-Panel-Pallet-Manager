@@ -17,6 +17,20 @@ excel_dir = project_root / 'EXCEL'
 icon_ico = project_root / 'icons' / 'PalletManager.ico'
 icon_icns = project_root / 'icons' / 'PalletManager.icns'
 
+# Debug output
+print("\n" + "=" * 70)
+print("CHECKING FOR REFERENCE WORKBOOK")
+print("=" * 70)
+print(f"Spec file location: {Path(__file__)}")
+print(f"Project root: {project_root}")
+print(f"EXCEL directory: {excel_dir}")
+print(f"EXCEL exists: {excel_dir.exists()}")
+if excel_dir.exists():
+    print(f"\nAll files in EXCEL directory:")
+    for f in sorted(excel_dir.glob('*')):
+        print(f"  - {f.name} ({f.stat().st_size} bytes)")
+print("=" * 70 + "\n")
+
 # Find a reference workbook - can be BUILD or CURRENT.xlsx
 excel_file = None
 
