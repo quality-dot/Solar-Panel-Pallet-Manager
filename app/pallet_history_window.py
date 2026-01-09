@@ -96,9 +96,13 @@ class PalletHistoryWindow:
         tk.Label(customer_filter_frame, text="Customer:", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=5)
         
         self.customer_filter_var = tk.StringVar(value="ALL")
-        self.customer_filter_menu = tk.OptionMenu(customer_filter_frame, self.customer_filter_var, "ALL", command=self._on_customer_filter_changed)
+        # Don't use command parameter - it causes infinite loop. Use trace instead.
+        self.customer_filter_menu = tk.OptionMenu(customer_filter_frame, self.customer_filter_var, "ALL")
         self.customer_filter_menu.config(font=("Arial", 9), width=25)
         self.customer_filter_menu.pack(side=tk.LEFT, padx=3)
+        
+        # Add trace to detect changes (avoids infinite loop from command parameter)
+        self.customer_filter_var.trace('w', self._on_customer_filter_changed)
         
         # Update customer filter options
         self._update_customer_filter_options()

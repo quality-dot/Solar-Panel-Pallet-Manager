@@ -99,10 +99,17 @@ OPTIONS = {
         'pandas.io.clipboard',  # Not used
         'openpyxl.tests',
         'sqlite3',  # Not used
-        'multiprocessing',  # Not used
+        # 'multiprocessing',  # Required by py2app boot process - DO NOT EXCLUDE
         'concurrent.futures',  # Not used
+        # GUI frameworks not used (we use tkinter)
+        # Note: PyQt6 may still be included by py2app recipes, removed in post-build
+        'PyQt5',
+        'PySide6',
+        'PySide2',
+        'wx',
+        'kivy',
     ],
-    'site_packages': True,  # Include site-packages to ensure all dependencies
+    'site_packages': True,  # Include site-packages but exclude large unused packages
     'semi_standalone': False,  # Fully standalone bundle (better performance)
     'use_pythonpath': True,  # Use Python path
     'strip': True,  # Strip debug symbols for smaller size and faster loading

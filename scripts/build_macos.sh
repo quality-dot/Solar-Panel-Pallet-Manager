@@ -71,6 +71,16 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Remove PyQt6 to reduce app size (not used - we use tkinter)
+echo ""
+echo "Removing unused PyQt6 (saves ~220MB)..."
+if [ -d "dist/Pallet Manager.app/Contents/Resources/lib/python3.11/PyQt6" ]; then
+    rm -rf "dist/Pallet Manager.app/Contents/Resources/lib/python3.11/PyQt6"
+    echo "✅ Removed PyQt6"
+else
+    echo "ℹ️  PyQt6 not found (already removed or not included)"
+fi
+
 echo ""
 echo "========================================"
 echo "Build Complete!"
