@@ -757,13 +757,15 @@ class PalletBuilderGUI:
             
             # In packaged app, reference workbook is in reference_workbook/ subdirectory
             if is_packaged():
-                # Check in executable directory
+                # For py2app (macOS): Resources are in Contents/Resources/
+                # Executable is in Contents/MacOS/, so go up one level then into Resources
                 exe_dir = Path(sys.executable).parent
-                ref_path = exe_dir / "reference_workbook" / "BUILD 10-12-25.xlsx"
+                resources_dir = exe_dir.parent / "Resources"
+                ref_path = resources_dir / "reference_workbook" / "BUILD 10-12-25.xlsx"
                 if ref_path.exists():
                     reference_workbook = ref_path
                 else:
-                    # Try _internal subdirectory (PyInstaller)
+                    # Fallback: Try _internal subdirectory (PyInstaller on Windows)
                     internal_path = exe_dir / "_internal" / "reference_workbook" / "BUILD 10-12-25.xlsx"
                     if internal_path.exists():
                         reference_workbook = internal_path
