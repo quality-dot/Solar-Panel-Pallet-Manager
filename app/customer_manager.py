@@ -15,23 +15,19 @@ from datetime import datetime, timedelta
 class CustomerManager:
     """Manages customer information for pallet exports"""
     
-    def __init__(self, excel_file: Path, defer_load: bool = False):
+    def __init__(self, excel_file: Path):
         """
         Initialize CustomerManager.
         
         Args:
             excel_file: Path to Excel file storing customer data
-            defer_load: If True, don't load customers immediately (for faster startup)
         """
         self.excel_file = excel_file
         self.customers: List[Dict] = []
         self._last_load_time: Optional[datetime] = None
         self._cache_ttl = timedelta(seconds=5)  # Cache customers for 5 seconds
         self._file_modified_time: Optional[datetime] = None
-        
-        # Load customers immediately unless deferred
-        if not defer_load:
-            self._load_customers()
+        self._load_customers()
     
     def _load_customers(self, force_reload=False):
         """
