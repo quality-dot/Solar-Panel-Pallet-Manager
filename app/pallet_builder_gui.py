@@ -261,11 +261,15 @@ class PalletBuilderGUI:
         # Create splash window (centered, on top)
         splash = tk.Toplevel(self.root)
         splash.title("Pallet Manager")
+        
+        # Remove window decorations BEFORE setting geometry (order matters on macOS)
+        try:
+            splash.overrideredirect(True)
+        except Exception as e:
+            print(f"Warning: Could not set overrideredirect: {e}")
+        
         splash.geometry("500x250")
         splash.resizable(0, 0)  # Use 0 instead of False for Tk compatibility
-        
-        # Remove window decorations for cleaner look
-        splash.overrideredirect(1)  # Use 1 instead of True for Tk compatibility
         
         # Center the window
         splash.update_idletasks()
