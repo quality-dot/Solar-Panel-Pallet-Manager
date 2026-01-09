@@ -81,15 +81,11 @@ class PalletBuilderGUI:
                     screen_height = self.root.winfo_screenheight()
                     # Set geometry to fill screen (accounting for menu bar and dock)
                     self.root.geometry(f"{screen_width}x{screen_height-100}+0+0")
-                    # Alternative: use zoomed attribute (may not work on all macOS versions)
-                    try:
-                        self.root.attributes('-zoomed', True)
-                    except:
-                        pass
+                    # Note: -zoomed attribute doesn't work reliably on macOS, using geometry instead
                 else:
                     # Linux: try zoomed state
                     try:
-                        self.root.attributes('-zoomed', True)
+                        self.root.attributes('-zoomed', 1)  # Use 1 instead of True for Tk compatibility
                     except:
                         # Fallback: maximize manually
                         screen_width = self.root.winfo_screenwidth()
@@ -278,7 +274,10 @@ class PalletBuilderGUI:
         splash.geometry(f"500x250+{x}+{y}")
         
         # Make it stay on top
-        splash.attributes("-topmost", True)
+        try:
+            splash.attributes("-topmost", 1)  # Use 1 instead of True for Tk compatibility
+        except Exception:
+            pass  # Ignore if this fails
         
         # Configure style
         bg_color = "#2C3E50"
