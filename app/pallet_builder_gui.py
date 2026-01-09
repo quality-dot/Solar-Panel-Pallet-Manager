@@ -2767,13 +2767,20 @@ class PalletBuilderGUI:
         
         # Populate listbox
         def refresh_listbox():
-            # Force reload customers from Excel file (bypass cache)
-            self.customer_manager.refresh_customers(force_reload=True)
-            customer_listbox.delete(0, tk.END)
-            for customer_name in self.customer_manager.get_customer_names():
-                customer_listbox.insert(tk.END, customer_name)
-            # Update customer menu on main window (force refresh)
-            self._update_customer_menu(force_refresh=True)
+            try:
+                # Force reload customers from Excel file (bypass cache)
+                self.customer_manager.refresh_customers(force_reload=True)
+                customer_listbox.delete(0, tk.END)
+                for customer_name in self.customer_manager.get_customer_names():
+                    customer_listbox.insert(tk.END, customer_name)
+                # Update customer menu on main window (force refresh)
+                # Only update if menu exists and dialog is still open
+                if self.active_customer_menu and dialog.winfo_exists():
+                    self._update_customer_menu(force_refresh=True)
+            except Exception as e:
+                print(f"Error in refresh_listbox: {e}")
+                import traceback
+                traceback.print_exc()
         
         # Load customer list asynchronously to avoid blocking UI
         dialog.after(10, refresh_listbox)
