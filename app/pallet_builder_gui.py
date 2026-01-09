@@ -60,45 +60,49 @@ class PalletBuilderGUI:
         version = get_version()
         self.root.title(f"Pallet Manager - {version}")
         
-        # macOS-specific optimizations for better performance
+        # macOS-specific settings
         if platform.system() == 'Darwin':
             try:
-                # Disable automatic window tabbing on macOS (can cause slowness)
-                # Include fullscreen button (zoomBox) for maximize functionality
+                # Enable fullscreen button on macOS
                 self.root.tk.call('::tk::unsupported::MacWindowStyle', 'style', self.root._w, 'document', 'closeBox collapseBox resizable zoomBox')
             except Exception:
                 pass  # Ignore if this fails on older macOS versions
         
-        # Start maximized/fullscreen on all platforms
-        try:
-            if platform.system() == 'Windows':
-                # Windows: use state zoomed
-                self.root.state('zoomed')
-            elif platform.system() == 'Darwin':
-                # macOS: maximize to full screen (not fullscreen mode, just maximized)
-                # Get screen dimensions
-                screen_width = self.root.winfo_screenwidth()
-                screen_height = self.root.winfo_screenheight()
-                # Set geometry to fill screen (accounting for menu bar and dock)
-                self.root.geometry(f"{screen_width}x{screen_height-100}+0+0")
-                # Alternative: use zoomed attribute (may not work on all macOS versions)
-                try:
-                    self.root.attributes('-zoomed', True)
-                except:
-                    pass
-            else:
-                # Linux: try zoomed state
-                try:
-                    self.root.attributes('-zoomed', True)
-                except:
-                    # Fallback: maximize manually
+        # Start maximized/fullscreen on all platforms (deferred to avoid blocking)
+        def maximize_window():
+            try:
+                if platform.system() == 'Windows':
+                    # Windows: use state zoomed
+                    self.root.state('zoomed')
+                elif platform.system() == 'Darwin':
+                    # macOS: maximize to full screen (not fullscreen mode, just maximized)
+                    # Get screen dimensions
                     screen_width = self.root.winfo_screenwidth()
                     screen_height = self.root.winfo_screenheight()
-                    self.root.geometry(f"{screen_width}x{screen_height}+0+0")
-        except Exception as e:
-            # Fallback to default size if maximizing fails
-            print(f"Could not maximize window: {e}")
-            self.root.geometry("900x750")
+                    # Set geometry to fill screen (accounting for menu bar and dock)
+                    self.root.geometry(f"{screen_width}x{screen_height-100}+0+0")
+                    # Alternative: use zoomed attribute (may not work on all macOS versions)
+                    try:
+                        self.root.attributes('-zoomed', True)
+                    except:
+                        pass
+                else:
+                    # Linux: try zoomed state
+                    try:
+                        self.root.attributes('-zoomed', True)
+                    except:
+                        # Fallback: maximize manually
+                        screen_width = self.root.winfo_screenwidth()
+                        screen_height = self.root.winfo_screenheight()
+                        self.root.geometry(f"{screen_width}x{screen_height}+0+0")
+            except Exception as e:
+                # Fallback to default size if maximizing fails
+                print(f"Could not maximize window: {e}")
+                self.root.geometry("900x750")
+        
+        # Set initial size, then maximize after window is shown
+        self.root.geometry("900x750")
+        self.root.after(1, maximize_window)
         
         # Set window icon for taskbar (Windows) and dock (macOS)
         self._set_window_icon()
