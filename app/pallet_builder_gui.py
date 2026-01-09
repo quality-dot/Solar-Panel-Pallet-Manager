@@ -2765,8 +2765,16 @@ class PalletBuilderGUI:
         customer_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=customer_listbox.yview)
         
+        # Flag to prevent re-entry
+        refresh_in_progress = {'value': False}
+        
         # Populate listbox
         def refresh_listbox():
+            # Prevent re-entry (avoid infinite loop)
+            if refresh_in_progress['value']:
+                return
+            
+            refresh_in_progress['value'] = True
             try:
                 # Force reload customers from Excel file (bypass cache)
                 self.customer_manager.refresh_customers(force_reload=True)
@@ -2781,6 +2789,8 @@ class PalletBuilderGUI:
                 print(f"Error in refresh_listbox: {e}")
                 import traceback
                 traceback.print_exc()
+            finally:
+                refresh_in_progress['value'] = False
         
         # Load customer list asynchronously to avoid blocking UI
         dialog.after(10, refresh_listbox)
