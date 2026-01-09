@@ -30,6 +30,22 @@ from app.version import get_version, get_version_info
 from app.customer_manager import CustomerManager
 
 
+def is_macos_dark_mode():
+    """Detect if macOS is in dark mode"""
+    try:
+        if platform.system() == 'Darwin':
+            result = subprocess.run(
+                ['defaults', 'read', '-g', 'AppleInterfaceStyle'],
+                capture_output=True,
+                text=True,
+                timeout=1
+            )
+            return result.returncode == 0 and 'Dark' in result.stdout
+    except Exception:
+        pass
+    return False
+
+
 class PalletBuilderGUI:
     """Main GUI window for pallet building"""
     
@@ -2747,29 +2763,56 @@ class PalletBuilderGUI:
         # Don't make it transient - let it be a separate window
         # dialog.transient(self.root)
         dialog.resizable(True, True)  # Allow resizing for better usability
-        dialog.config(bg="#F5F5F5")  # Light gray background
+        
+        # Detect dark mode and set appropriate colors
+        is_dark = is_macos_dark_mode()
+        
+        if is_dark:
+            # Dark mode colors
+            bg_main = "#2B2B2B"
+            bg_section = "#3C3C3C"
+            fg_text = "#E0E0E0"
+            fg_label = "#B0B0B0"
+            entry_bg = "#4A4A4A"
+            entry_fg = "#FFFFFF"
+            listbox_bg = "#3C3C3C"
+            listbox_fg = "#E0E0E0"
+            title_fg = "#64B5F6"
+        else:
+            # Light mode colors
+            bg_main = "#F5F5F5"
+            bg_section = "#F5F5F5"
+            fg_text = "#333333"
+            fg_label = "#333333"
+            entry_bg = "white"
+            entry_fg = "black"
+            listbox_bg = "white"
+            listbox_fg = "black"
+            title_fg = "#1976D2"
+        
+        dialog.config(bg=bg_main)
         dialog.geometry("750x650+400+200")  # Larger and better positioned
         
-        # Main container with light background
-        main_frame = tk.Frame(dialog, bg="#F5F5F5")
+        # Main container
+        main_frame = tk.Frame(dialog, bg=bg_main)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=15)
         
-        # Title with dark text on light background
+        # Title
         title_label = tk.Label(main_frame, text="Customer Management", 
-                              font=("Arial", 16, "bold"), bg="#F5F5F5", fg="#1976D2")
+                              font=("Arial", 16, "bold"), bg=bg_main, fg=title_fg)
         title_label.pack(pady=(0, 20))
         
         # List of customers section
         list_section = tk.LabelFrame(main_frame, text=" Existing Customers ", 
-                                     font=("Arial", 11, "bold"), bg="#F5F5F5", fg="#333333",
+                                     font=("Arial", 11, "bold"), bg=bg_section, fg=fg_text,
                                      relief=tk.GROOVE, bd=2)
         list_section.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
         
-        list_inner = tk.Frame(list_section, bg="#F5F5F5")
+        list_inner = tk.Frame(list_section, bg=bg_section)
         list_inner.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Listbox with scrollbar and explicit colors
-        listbox_frame = tk.Frame(list_inner, bg="white", bd=2, relief=tk.SUNKEN)
+        # Listbox with scrollbar and adaptive colors
+        listbox_frame = tk.Frame(list_inner, bg=listbox_bg, bd=2, relief=tk.SUNKEN)
         listbox_frame.pack(fill=tk.BOTH, expand=True)
         
         scrollbar = tk.Scrollbar(listbox_frame)
@@ -2777,7 +2820,7 @@ class PalletBuilderGUI:
         
         customer_listbox = tk.Listbox(listbox_frame, yscrollcommand=scrollbar.set, 
                                       font=("Arial", 11), height=10, bd=0,
-                                      bg="white", fg="black", selectbackground="#2196F3",
+                                      bg=listbox_bg, fg=listbox_fg, selectbackground="#2196F3",
                                       selectforeground="white")
         customer_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=customer_listbox.yview)
@@ -2798,7 +2841,7 @@ class PalletBuilderGUI:
         refresh_listbox()
         
         # Add Refresh button below list
-        button_row = tk.Frame(list_inner, bg="#F5F5F5")
+        button_row = tk.Frame(list_inner, bg=bg_section)
         button_row.pack(fill=tk.X, pady=(10, 0))
         
         refresh_list_btn = tk.Button(button_row, text="🔄 Refresh List", 
@@ -2820,11 +2863,11 @@ class PalletBuilderGUI:
         
         # Add/Edit Customer Section
         add_frame = tk.LabelFrame(main_frame, text=" Add / Edit Customer ", 
-                                 font=("Arial", 11, "bold"), bg="#F5F5F5", fg="#333333",
+                                 font=("Arial", 11, "bold"), bg=bg_section, fg=fg_text,
                                  relief=tk.GROOVE, bd=2)
         add_frame.pack(fill=tk.X, pady=(0, 15))
         
-        add_inner = tk.Frame(add_frame, bg="#F5F5F5")
+        add_inner = tk.Frame(add_frame, bg=bg_section)
         add_inner.pack(fill=tk.X, padx=10, pady=10)
         
         # Track currently selected customer for editing (None = adding new)
@@ -2836,16 +2879,16 @@ class PalletBuilderGUI:
         field_vars = []
         
         for i, label in enumerate(field_labels):
-            row = tk.Frame(add_inner, bg="#F5F5F5")
+            row = tk.Frame(add_inner, bg=bg_section)
             row.pack(fill=tk.X, padx=5, pady=5)
             
             tk.Label(row, text=label, width=12, anchor=tk.E, 
-                    font=("Arial", 11, "bold"), bg="#F5F5F5", fg="#333333").pack(side=tk.LEFT, padx=(0, 10))
+                    font=("Arial", 11, "bold"), bg=bg_section, fg=fg_label).pack(side=tk.LEFT, padx=(0, 10))
             
             var = tk.StringVar()
             field_vars.append(var)
             entry = tk.Entry(row, textvariable=var, font=("Arial", 11), 
-                           bd=2, relief=tk.SUNKEN, bg="white", fg="black")
+                           bd=2, relief=tk.SUNKEN, bg=entry_bg, fg=entry_fg)
             entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
             fields.append(entry)
             
@@ -2853,7 +2896,7 @@ class PalletBuilderGUI:
             var.trace('w', lambda *args: check_fields_filled())
         
         # Button frame for save/clear buttons
-        button_frame_form = tk.Frame(add_inner, bg="#F5F5F5")
+        button_frame_form = tk.Frame(add_inner, bg=bg_section)
         button_frame_form.pack(pady=(15, 5))
         
         # Save button - initially disabled
@@ -3047,11 +3090,11 @@ class PalletBuilderGUI:
         
         # Additional Actions Section
         actions_frame = tk.LabelFrame(main_frame, text=" Actions ", 
-                                     font=("Arial", 11, "bold"), bg="#F5F5F5", fg="#333333",
+                                     font=("Arial", 11, "bold"), bg=bg_section, fg=fg_text,
                                      relief=tk.GROOVE, bd=2)
         actions_frame.pack(fill=tk.X, pady=(0, 15))
         
-        actions_inner = tk.Frame(actions_frame, bg="#F5F5F5")
+        actions_inner = tk.Frame(actions_frame, bg=bg_section)
         actions_inner.pack(padx=10, pady=10)
         
         tk.Button(actions_inner, text="📋 Open Excel File", 
@@ -3067,7 +3110,7 @@ class PalletBuilderGUI:
                  activebackground="#C62828", activeforeground="white", cursor="hand2").pack(side=tk.LEFT, padx=5)
         
         # Bottom button frame with Close button
-        bottom_frame = tk.Frame(main_frame, bg="#F5F5F5")
+        bottom_frame = tk.Frame(main_frame, bg=bg_main)
         bottom_frame.pack(fill=tk.X)
         
         tk.Button(bottom_frame, text="✖ Close", command=dialog.destroy, width=25,
