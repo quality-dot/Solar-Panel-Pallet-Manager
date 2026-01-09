@@ -30,10 +30,12 @@ from app.version import get_version, get_version_info
 from app.customer_manager import CustomerManager
 
 
-def is_macos_dark_mode():
-    """Detect if macOS is in dark mode (fast check with 0.1s timeout)"""
-    try:
-        if platform.system() == 'Darwin':
+def is_dark_mode():
+    """Detect system dark mode on macOS or Windows (fast check with 0.1s timeout)"""
+    system = platform.system()
+    
+    if system == 'Darwin':  # macOS
+        try:
             result = subprocess.run(
                 ['defaults', 'read', '-g', 'AppleInterfaceStyle'],
                 capture_output=True,
@@ -41,9 +43,22 @@ def is_macos_dark_mode():
                 timeout=0.1  # Very fast timeout - defaults command is instant
             )
             return result.returncode == 0 and 'Dark' in result.stdout
-    except Exception:
-        pass
-    return False
+        except Exception:
+            pass
+    
+    elif system == 'Windows':
+        try:
+            import winreg
+            # Check Windows registry for dark mode setting
+            registry = winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER)
+            key = winreg.OpenKey(registry, r'Software\Microsoft\Windows\CurrentVersion\Themes\Personalize')
+            value, _ = winreg.QueryValueEx(key, 'AppsUseLightTheme')
+            winreg.CloseKey(key)
+            return value == 0  # 0 = Dark mode, 1 = Light mode
+        except (OSError, FileNotFoundError, ImportError):
+            pass  # Fallback to light mode if registry read fails
+    
+    return False  # Default to light mode for other OS or if detection fails
 
 
 class PalletBuilderGUI:
@@ -2917,7 +2932,7 @@ class PalletBuilderGUI:
         dialog.resizable(1, 1)  # Use 1 instead of True for Tk compatibility
         
         # Detect dark mode and set appropriate colors
-        is_dark = is_macos_dark_mode()
+        is_dark = is_dark_mode()
         
         if is_dark:
             # Dark mode colors
