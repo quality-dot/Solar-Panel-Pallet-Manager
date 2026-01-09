@@ -2360,16 +2360,19 @@ class PalletBuilderGUI:
     
     def import_data(self, event=None):
         """Import simulator data into the database"""
-        # Removed print for performance
-        
         try:
             if not self.serial_db:
                 messagebox.showerror("Error", "SerialDatabase not initialized", 
                                    parent=self.root)
                 return
             
-            # Open file dialog immediately (filedialog is non-blocking in Tkinter)
-            self._open_import_dialog()
+            # Update status to show we're responding
+            if self.status_label:
+                self.status_label.config(text="Opening file dialog...", fg="blue")
+                self.root.update_idletasks()
+            
+            # Open file dialog asynchronously to avoid blocking UI
+            self.root.after(50, self._open_import_dialog)
         except Exception as e:
             print(f"ERROR in import_data: {e}")
             import traceback
@@ -2772,7 +2775,8 @@ class PalletBuilderGUI:
             # Update customer menu on main window (force refresh)
             self._update_customer_menu(force_refresh=True)
         
-        refresh_listbox()
+        # Load customer list asynchronously to avoid blocking UI
+        dialog.after(10, refresh_listbox)
         
         # Add Refresh button next to list
         refresh_list_btn = tk.Button(list_frame, text="🔄 Refresh", 
