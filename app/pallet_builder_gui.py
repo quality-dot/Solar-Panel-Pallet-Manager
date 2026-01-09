@@ -31,14 +31,14 @@ from app.customer_manager import CustomerManager
 
 
 def is_macos_dark_mode():
-    """Detect if macOS is in dark mode"""
+    """Detect if macOS is in dark mode (fast check with 0.1s timeout)"""
     try:
         if platform.system() == 'Darwin':
             result = subprocess.run(
                 ['defaults', 'read', '-g', 'AppleInterfaceStyle'],
                 capture_output=True,
                 text=True,
-                timeout=1
+                timeout=0.1  # Very fast timeout - defaults command is instant
             )
             return result.returncode == 0 and 'Dark' in result.stdout
     except Exception:
@@ -2396,8 +2396,8 @@ class PalletBuilderGUI:
                 self.status_label.config(text="Opening file dialog...", fg="blue")
                 self.root.update_idletasks()
             
-            # Open file dialog asynchronously to avoid blocking UI
-            self.root.after(50, self._open_import_dialog)
+            # Open file dialog asynchronously to avoid blocking UI (reduced delay)
+            self.root.after(10, self._open_import_dialog)
         except Exception as e:
             print(f"ERROR in import_data: {e}")
             import traceback
@@ -2837,8 +2837,16 @@ class PalletBuilderGUI:
             except Exception as e:
                 messagebox.showerror("Error", f"Could not load customers:\n{e}", parent=dialog)
         
-        # Load customer list immediately (synchronous)
-        refresh_listbox()
+        # Show "Loading..." message initially
+        customer_listbox.insert(0, "Loading customers...")
+        customer_listbox.config(fg=fg_label)
+        
+        # Load customer list asynchronously after window is shown
+        def load_async():
+            refresh_listbox()
+            customer_listbox.config(fg=listbox_fg)  # Restore normal text color
+        
+        dialog.after(10, load_async)
         
         # Add Refresh button below list
         button_row = tk.Frame(list_inner, bg=bg_section)
