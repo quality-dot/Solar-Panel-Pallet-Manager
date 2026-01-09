@@ -85,6 +85,7 @@ Thumbs.db
 *.dmg
 *.pkg
 *.msi
+.initialized
 
 # Data directories (keep structure but ignore contents in git)
 EXCEL/*.xlsx

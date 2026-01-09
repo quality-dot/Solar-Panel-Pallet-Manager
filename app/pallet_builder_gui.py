@@ -80,10 +80,11 @@ class PalletBuilderGUI:
         self.active_customer_var: Optional[tk.StringVar] = None
         self.active_customer_menu: Optional[tk.OptionMenu] = None
         
-        # Check if this is first-time setup (no folders exist)
+        # Check if this is first-time setup using a marker file
         project_root = get_base_dir()
         excel_dir = project_root / "EXCEL"
-        is_first_launch = not excel_dir.exists() or not (excel_dir / "CURRENT.xlsx").exists()
+        marker_file = project_root / ".initialized"
+        is_first_launch = not marker_file.exists()
         
         # Show loading screen on first launch (especially Windows)
         if is_first_launch:
@@ -388,6 +389,14 @@ class PalletBuilderGUI:
             self._update_loading_progress(100, "Setup complete!")
             self.root.update()
             time.sleep(0.3)  # Brief pause to show completion
+            
+            # Create marker file to indicate initialization is complete
+            marker_file = project_root / ".initialized"
+            try:
+                marker_file.touch()
+                print(f"Created initialization marker file: {marker_file}")
+            except Exception as e:
+                print(f"Warning: Could not create marker file: {e}")
             
             # Close loading screen and setup UI
             self._close_loading_screen()
