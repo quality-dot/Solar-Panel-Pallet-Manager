@@ -5,9 +5,27 @@ Build with: pyinstaller pallet_builder.spec
 """
 
 import os
+import sys
+from pathlib import Path
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
 block_cipher = None
+
+# Get absolute paths for data files (more reliable on Windows)
+project_root = Path(__file__).parent
+excel_file = project_root / 'EXCEL' / 'BUILD 10-12-25.xlsx'
+icon_ico = project_root / 'icons' / 'PalletManager.ico'
+icon_icns = project_root / 'icons' / 'PalletManager.icns'
+
+# Verify files exist before building
+if not excel_file.exists():
+    print(f"ERROR: Reference workbook not found: {excel_file}")
+    print(f"Current directory: {os.getcwd()}")
+    print(f"Project root: {project_root}")
+    sys.exit(1)
+
+print(f"✓ Found reference workbook: {excel_file}")
+print(f"  Size: {excel_file.stat().st_size} bytes")
 
 # Check if reportlab is available (required for PDF creation)
 # Note: reportlab must be installed before building: pip install reportlab
@@ -43,10 +61,10 @@ a = Analysis(
     binaries=[],
     datas=[
         # Include reference workbook - will be copied to EXCEL folder on first run
-        ('EXCEL/BUILD 10-12-25.xlsx', 'reference_workbook'),
+        (str(excel_file), 'reference_workbook'),
         # Include icons for window icon (taskbar/dock)
-        ('icons/PalletManager.ico', 'icons'),
-        ('icons/PalletManager.icns', 'icons'),
+        (str(icon_ico), 'icons'),
+        (str(icon_icns), 'icons'),
     ] + reportlab_datas,  # Add collected reportlab data files
     hiddenimports=[
         # App modules - must be explicitly included
