@@ -262,10 +262,10 @@ class PalletBuilderGUI:
         splash = tk.Toplevel(self.root)
         splash.title("Pallet Manager")
         splash.geometry("500x250")
-        splash.resizable(False, False)
+        splash.resizable(0, 0)  # Use 0 instead of False for Tk compatibility
         
         # Remove window decorations for cleaner look
-        splash.overrideredirect(True)
+        splash.overrideredirect(1)  # Use 1 instead of True for Tk compatibility
         
         # Center the window
         splash.update_idletasks()
@@ -1196,7 +1196,7 @@ class PalletBuilderGUI:
         dialog = tk.Toplevel(self.root)
         dialog.title("Select Panel Type, Pallet Number & Customer")
         dialog.transient(self.root)
-        dialog.resizable(False, False)
+        dialog.resizable(0, 0)  # Use 0 instead of False for Tk compatibility
         dialog.config(bg="white")
         
         # Use fixed position instead of calculating (faster - no screen size queries)
@@ -2787,7 +2787,7 @@ class PalletBuilderGUI:
         progress_window = tk.Toplevel(self.root)
         progress_window.title("Exporting Pallet...")
         progress_window.transient(self.root)
-        progress_window.resizable(False, False)
+        progress_window.resizable(0, 0)  # Use 0 instead of False for Tk compatibility
         progress_window.config(bg="white")
         
         # Center the dialog
@@ -2857,7 +2857,7 @@ class PalletBuilderGUI:
         dialog.title(f"Customer Management - {version}")
         # Don't make it transient - let it be a separate window
         # dialog.transient(self.root)
-        dialog.resizable(True, True)  # Allow resizing for better usability
+        dialog.resizable(1, 1)  # Use 1 instead of True for Tk compatibility
         
         # Detect dark mode and set appropriate colors
         is_dark = is_macos_dark_mode()
