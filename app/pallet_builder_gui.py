@@ -61,6 +61,14 @@ class PalletBuilderGUI:
         self.root.title(f"Pallet Manager - {version}")
         self.root.geometry("700x600")
         
+        # macOS-specific optimizations for better performance
+        if platform.system() == 'Darwin':
+            try:
+                # Disable automatic window tabbing on macOS (can cause slowness)
+                self.root.tk.call('::tk::unsupported::MacWindowStyle', 'style', self.root._w, 'document', 'closeBox collapseBox resizable')
+            except Exception:
+                pass  # Ignore if this fails on older macOS versions
+        
         # Set window icon for taskbar (Windows) and dock (macOS)
         self._set_window_icon()
         
