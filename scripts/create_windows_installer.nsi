@@ -1,0 +1,113 @@
+; NSIS Installer Script for Windows
+; Creates a professional installer wizard
+
+!define APP_NAME "Pallet Manager"
+!define APP_VERSION "1.0.0"
+!define APP_PUBLISHER "Crossroads Solar"
+!define APP_EXE "Pallet Manager.exe"
+!define APP_INSTALL_DIR "$PROGRAMFILES\${APP_NAME}"
+
+; Modern UI
+!include "MUI2.nsh"
+
+; Installer attributes
+Name "${APP_NAME}"
+OutFile "dist\${APP_NAME}-Setup.exe"
+InstallDir "${APP_INSTALL_DIR}"
+RequestExecutionLevel admin
+Unicode True
+
+; Compression settings - LZMA for best compression
+SetCompressor /SOLID lzma
+SetCompressorDictSize 32
+
+; Interface Settings
+!define MUI_ABORTWARNING
+!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
+!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
+
+; Pages
+!insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_LICENSE "installer_license.txt"
+!insertmacro MUI_PAGE_COMPONENTS
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
+
+; Uninstaller pages
+!insertmacro MUI_UNPAGE_WELCOME
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_UNPAGE_FINISH
+
+; Languages
+!insertmacro MUI_LANGUAGE "English"
+
+; Installer sections
+Section "Main Application" SecMain
+    SectionIn RO
+    
+    ; Set output path
+    SetOutPath "$INSTDIR"
+    
+    ; Check if exe exists
+    IfFileExists "dist\${APP_EXE}" 0 +3
+        File "dist\${APP_EXE}"
+        Goto +2
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Error: ${APP_EXE} not found in dist folder. Please build the application first."
+    Abort
+    
+    ; Create shortcuts
+    CreateDirectory "$SMPROGRAMS\${APP_NAME}"
+    CreateShortcut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
+    CreateShortcut "$SMPROGRAMS\${APP_NAME}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+    CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
+    
+    ; Write uninstaller
+    WriteUninstaller "$INSTDIR\Uninstall.exe"
+    
+    ; Write registry keys
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+        "DisplayName" "${APP_NAME}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+        "UninstallString" "$INSTDIR\Uninstall.exe"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+        "Publisher" "${APP_PUBLISHER}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+        "DisplayVersion" "${APP_VERSION}"
+SectionEnd
+
+Section "Start Menu Shortcut" SecStartMenu
+    ; Already created in main section
+SectionEnd
+
+Section "Desktop Shortcut" SecDesktop
+    ; Already created in main section
+SectionEnd
+
+; Section descriptions
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecMain} "Installs ${APP_NAME} and required files."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecStartMenu} "Creates a shortcut in the Start Menu."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Creates a shortcut on the Desktop."
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
+
+; Uninstaller
+Section "Uninstall"
+    ; Remove files
+    Delete "$INSTDIR\${APP_EXE}"
+    Delete "$INSTDIR\Uninstall.exe"
+    
+    ; Remove shortcuts
+    Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
+    Delete "$SMPROGRAMS\${APP_NAME}\Uninstall.lnk"
+    RMDir "$SMPROGRAMS\${APP_NAME}"
+    Delete "$DESKTOP\${APP_NAME}.lnk"
+    
+    ; Remove registry keys
+    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
+    
+    ; Remove install directory
+    RMDir "$INSTDIR"
+SectionEnd
+
