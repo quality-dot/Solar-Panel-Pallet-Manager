@@ -7,8 +7,8 @@ from setuptools import setup
 
 APP = ['app/pallet_builder_gui.py']
 DATA_FILES = [
-    # Include any data files needed
-    # ('app', ['app/config.yaml']),
+    # Include reference workbook for first-time setup
+    ('reference_workbook', ['EXCEL/BUILD 10-12-25.xlsx']),
 ]
 
 # Check if reportlab is available (optional dependency)
