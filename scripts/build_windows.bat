@@ -49,8 +49,19 @@ REM Update PyInstaller and hooks to latest versions
 echo Updating PyInstaller and hooks...
 pip install -U pyinstaller pyinstaller-hooks-contrib
 
+REM Clean up old build artifacts to ensure fresh build
+echo.
+echo Cleaning old build artifacts...
+if exist "build" rmdir /s /q "build"
+if exist "dist" rmdir /s /q "dist"
+if exist "Pallet Manager.exe" del /f /q "Pallet Manager.exe"
+if exist "__pycache__" rmdir /s /q "__pycache__"
+if exist "app\__pycache__" rmdir /s /q "app\__pycache__"
+echo Done cleaning!
+echo.
+
 REM Build with reduced logging for cleaner output
-python -m PyInstaller pallet_builder.spec --clean --noconfirm --distpath=. --log-level=WARN
+python -m PyInstaller pallet_builder.spec --clean --noconfirm --distpath=. --log-level=INFO
 
 if errorlevel 1 (
     echo.
