@@ -7,6 +7,7 @@ Fallback script if PowerShell download fails in build_windows.bat
 import sys
 import urllib.request
 import zipfile
+import ssl
 from pathlib import Path
 
 SUMATRA_VERSION = "3.5.2"
@@ -37,6 +38,14 @@ def download_sumatra():
                 sys.stdout.write(f"\r  Progress: {percent:.1f}% ({downloaded}/{total_size} bytes)")
                 sys.stdout.flush()
         
+        # Create SSL context that doesn't verify certificates (for corporate proxies/firewalls)
+        ssl_context = ssl._create_unverified_context()
+        
+        # Create opener with unverified SSL context
+        opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ssl_context))
+        urllib.request.install_opener(opener)
+        
+        # Download with progress
         urllib.request.urlretrieve(SUMATRA_URL, ZIP_PATH, show_progress)
         print("\n")
         
