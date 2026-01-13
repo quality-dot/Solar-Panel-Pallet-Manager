@@ -76,6 +76,31 @@ if not excel_file or not excel_file.exists():
 print(f"  Full path: {excel_file}")
 print(f"  Size: {excel_file.stat().st_size} bytes")
 
+# Check and collect openpyxl (REQUIRED for Excel operations)
+print("\nChecking openpyxl...")
+openpyxl_hiddenimports = []
+openpyxl_datas = []
+
+try:
+    import openpyxl
+    print(f"✓ openpyxl found: {openpyxl.__version__ if hasattr(openpyxl, '__version__') else 'unknown version'}")
+    
+    # Collect all openpyxl submodules and data files to ensure it's fully bundled
+    openpyxl_hiddenimports = collect_submodules('openpyxl')
+    openpyxl_datas = collect_data_files('openpyxl')
+    print(f"✓ Collected {len(openpyxl_hiddenimports)} openpyxl modules")
+    print(f"✓ Collected {len(openpyxl_datas)} openpyxl data files")
+    
+except ImportError as e:
+    print("=" * 70)
+    print("ERROR: openpyxl not found. Application cannot function without it!")
+    print("=" * 70)
+    print("Please install openpyxl before building:")
+    print("  python -m pip install openpyxl")
+    print(f"Error: {e}")
+    print("=" * 70)
+    sys.exit(1)
+
 # Check if reportlab is available (required for PDF creation)
 # Note: reportlab must be installed before building: pip install reportlab
 HAS_REPORTLAB = False
@@ -114,7 +139,7 @@ a = Analysis(
         # Include icons for window icon (taskbar/dock)
         (str(icon_ico), 'icons'),
         (str(icon_icns), 'icons'),
-    ] + reportlab_datas,  # Add collected reportlab data files
+    ] + openpyxl_datas + reportlab_datas,  # Add collected openpyxl and reportlab data files
     hiddenimports=[
         # App modules - must be explicitly included
         'app',
@@ -129,21 +154,6 @@ a = Analysis(
         'secrets',
         'hashlib',
         'hmac',
-        # openpyxl - Excel file operations
-        'openpyxl',
-        'openpyxl.cell._writer',
-        'openpyxl.workbook._writer',
-        'openpyxl.styles',
-        'openpyxl.styles.fonts',
-        'openpyxl.styles.borders',
-        'openpyxl.styles.fills',
-        'openpyxl.styles.alignment',
-        'openpyxl.styles.protection',
-        'openpyxl.utils',
-        'openpyxl.cell.cell',
-        'openpyxl.cell.text',
-        'openpyxl.worksheet.worksheet',
-        'openpyxl.workbook.workbook',
         # pandas - Data processing
         'pandas',
         'pandas._libs',
@@ -189,7 +199,7 @@ a = Analysis(
         # Pillow (PIL) - image support for reportlab
         'PIL',
         'PIL.Image',
-    ] + reportlab_hiddenimports,  # Add all collected reportlab modules
+    ] + openpyxl_hiddenimports + reportlab_hiddenimports,  # Add all collected openpyxl and reportlab modules
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
