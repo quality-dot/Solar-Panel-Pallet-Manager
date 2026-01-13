@@ -1071,12 +1071,46 @@ class PalletHistoryWindow:
             progress_window.update()
             
             # Create PDF from Excel files
-            self._excel_to_pdf(file_paths, pdf_path, progress_label)
+            # Returns list of PDF paths (one per pallet)
+            individual_pdfs = self._excel_to_pdf(file_paths, pdf_path, progress_label)
             
-            progress_window.destroy()
-            
-            # Automatically open print dialog (no prompt)
-            self._print_pdf(pdf_path)
+            # If multiple PDFs, create a merged version for printing
+            if len(individual_pdfs) > 1:
+                progress_label.config(text="Creating merged PDF for printing...")
+                progress_label.master.update()
+                
+                # Create PRINT folder inside HISTORY
+                print_folder = pdf_path.parent / "PRINT"
+                print_folder.mkdir(exist_ok=True)
+                
+                # Create merged PDF filename with timestamp
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                merged_pdf_name = f"PRINT_Combined_{timestamp}.pdf"
+                merged_pdf_path = print_folder / merged_pdf_name
+                
+                # Merge all individual PDFs
+                self._merge_pdfs([str(p) for p in individual_pdfs], merged_pdf_path)
+                
+                progress_window.destroy()
+                
+                # Show success message
+                messagebox.showinfo(
+                    "PDFs Created Successfully",
+                    f"✓ Individual PDFs saved: {len(individual_pdfs)} files\n"
+                    f"  Location: {pdf_path.parent}\n\n"
+                    f"✓ Merged print PDF created:\n"
+                    f"  {merged_pdf_path.name}\n\n"
+                    f"Opening print dialog for merged PDF...",
+                    parent=self.window
+                )
+                
+                # Open print dialog for merged PDF only
+                self._print_pdf(merged_pdf_path)
+            else:
+                progress_window.destroy()
+                
+                # Single PDF - just print it
+                self._print_pdf(individual_pdfs[0])
             
         except Exception as e:
             messagebox.showerror("Error", 
@@ -1084,7 +1118,11 @@ class PalletHistoryWindow:
                                parent=self.window)
     
     def _excel_to_pdf(self, excel_files: List[Path], pdf_path: Path, progress_label: tk.Label):
-        """Convert Excel files to PDF - preserves exact Excel formatting"""
+        """Convert Excel files to PDF - preserves exact Excel formatting
+        
+        Returns:
+            List[Path]: List of PDF file paths created (one per excel file)
+        """
         import tempfile
         
         # Try method 1: Excel COM automation (Windows + Microsoft Excel)
@@ -1161,21 +1199,31 @@ class PalletHistoryWindow:
             
             excel.Quit()
             
-            # If we have multiple PDFs, merge them
-            if len(temp_pdfs) > 1:
-                self._merge_pdfs(temp_pdfs, pdf_path)
-                # Clean up temp files
-                for temp_pdf in temp_pdfs:
-                    try:
-                        Path(temp_pdf).unlink()
-                    except:
-                        pass
-            elif len(temp_pdfs) == 1:
-                # Just rename the single PDF
-                import shutil
-                shutil.move(temp_pdfs[0], pdf_path)
-            else:
+            # Save individual PDFs with proper names (one per pallet)
+            import shutil
+            saved_pdfs = []
+            
+            for idx, (temp_pdf, excel_file) in enumerate(zip(temp_pdfs, excel_files)):
+                # Create filename based on Excel filename
+                pdf_name = excel_file.stem + '.pdf'
+                final_pdf_path = pdf_path.parent / pdf_name
+                
+                # If file exists, add number suffix
+                counter = 1
+                while final_pdf_path.exists():
+                    pdf_name = f"{excel_file.stem}_{counter}.pdf"
+                    final_pdf_path = pdf_path.parent / pdf_name
+                    counter += 1
+                
+                # Move temp PDF to final location
+                shutil.move(temp_pdf, final_pdf_path)
+                saved_pdfs.append(final_pdf_path)
+            
+            if not saved_pdfs:
                 raise Exception("No PDFs were created")
+            
+            # Return list of individual PDFs (don't merge here)
+            return saved_pdfs
                 
         finally:
             pythoncom.CoUninitialize()
@@ -1263,12 +1311,28 @@ class PalletHistoryWindow:
             if not temp_pdfs:
                 raise Exception("No PDFs were created by LibreOffice")
             
-            # Merge or copy PDFs
-            if len(temp_pdfs) > 1:
-                self._merge_pdfs(temp_pdfs, pdf_path)
-            else:
-                import shutil
-                shutil.copy(temp_pdfs[0], pdf_path)
+            # Save individual PDFs with proper names (one per pallet)
+            import shutil
+            saved_pdfs = []
+            
+            for temp_pdf, excel_file in zip(temp_pdfs, excel_files):
+                # Create filename based on Excel filename
+                pdf_name = excel_file.stem + '.pdf'
+                final_pdf_path = pdf_path.parent / pdf_name
+                
+                # If file exists, add number suffix
+                counter = 1
+                while final_pdf_path.exists():
+                    pdf_name = f"{excel_file.stem}_{counter}.pdf"
+                    final_pdf_path = pdf_path.parent / pdf_name
+                    counter += 1
+                
+                # Copy temp PDF to final location
+                shutil.copy(temp_pdf, final_pdf_path)
+                saved_pdfs.append(final_pdf_path)
+            
+            # Return list of individual PDFs (don't merge here)
+            return saved_pdfs
                 
         finally:
             # Clean up temp directory
@@ -1376,6 +1440,10 @@ class PalletHistoryWindow:
                 continue
         
         c.save()
+        
+        # For reportlab, we created one merged PDF already
+        # Return it as a single-item list for consistency
+        return [pdf_path]
     
     def _merge_pdfs(self, pdf_files: List[str], output_path: Path):
         """Merge multiple PDF files into one"""
