@@ -94,6 +94,7 @@ EXCEL/*.xlsx
 EXCEL/backups/*
 !EXCEL/backups/.gitkeep
 PALLETS/**/*.xlsx
+!PALLETS/serial_database.xlsx
 PALLETS/**/*.json
 !PALLETS/.gitkeep
 IMPORTED DATA/*.xlsx
