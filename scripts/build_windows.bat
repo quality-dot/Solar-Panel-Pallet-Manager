@@ -12,10 +12,10 @@ python -c "import reportlab" 2>nul
 if errorlevel 1 (
     echo WARNING: reportlab is not installed. PDF creation will not work.
     echo Installing reportlab...
-    pip install reportlab
+    python -m pip install reportlab
     if errorlevel 1 (
         echo ERROR: Failed to install reportlab. Please install manually:
-        echo   pip install reportlab
+        echo   python -m pip install reportlab
         pause
         exit /b 1
     )
@@ -25,10 +25,10 @@ REM Check if jinja2 is installed (dependency of pandas/reportlab)
 python -c "import jinja2" 2>nul
 if errorlevel 1 (
     echo Installing jinja2...
-    pip install jinja2
+    python -m pip install jinja2
     if errorlevel 1 (
         echo ERROR: Failed to install jinja2. Please install manually:
-        echo   pip install jinja2
+        echo   python -m pip install jinja2
         pause
         exit /b 1
     )
@@ -38,16 +38,16 @@ REM Check if Pillow is installed (dependency of reportlab for image support)
 python -c "import PIL" 2>nul
 if errorlevel 1 (
     echo Installing Pillow...
-    pip install Pillow
+    python -m pip install Pillow
     if errorlevel 1 (
         echo WARNING: Failed to install Pillow. PDF creation may have limited functionality.
-        echo   pip install Pillow
+        echo   python -m pip install Pillow
     )
 )
 
 REM Update PyInstaller and hooks to latest versions
 echo Updating PyInstaller and hooks...
-pip install -U pyinstaller pyinstaller-hooks-contrib
+python -m pip install -U pyinstaller pyinstaller-hooks-contrib
 
 REM Clean up old build artifacts to ensure fresh build
 echo.
