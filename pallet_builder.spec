@@ -233,7 +233,7 @@ a = Analysis(
         'setuptools',
         'distutils',
         # Note: 'email' removed from excludes - required by reportlab
-        'http',
+        # Note: 'http' removed from excludes - required by reportlab
         'urllib3',
         'requests',  # If not used
         'xmlrpc',
