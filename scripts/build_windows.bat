@@ -7,6 +7,43 @@ cd /d "%~dp0.."
 echo Building Pallet Manager for Windows...
 echo.
 
+REM Install all required dependencies automatically
+echo Installing required dependencies...
+python -m pip install -U openpyxl pandas reportlab jinja2 Pillow 2>nul
+if errorlevel 1 (
+    echo WARNING: Some dependencies may have failed to install.
+    echo Continuing with build - will check each dependency individually...
+)
+echo.
+
+REM Check if openpyxl is installed (REQUIRED - Excel operations)
+python -c "import openpyxl" 2>nul
+if errorlevel 1 (
+    echo ERROR: openpyxl is not installed and is REQUIRED!
+    echo Installing openpyxl...
+    python -m pip install openpyxl
+    if errorlevel 1 (
+        echo ERROR: Failed to install openpyxl. Please install manually:
+        echo   python -m pip install openpyxl
+        pause
+        exit /b 1
+    )
+)
+
+REM Check if pandas is installed (REQUIRED - Data processing)
+python -c "import pandas" 2>nul
+if errorlevel 1 (
+    echo ERROR: pandas is not installed and is REQUIRED!
+    echo Installing pandas...
+    python -m pip install pandas
+    if errorlevel 1 (
+        echo ERROR: Failed to install pandas. Please install manually:
+        echo   python -m pip install pandas
+        pause
+        exit /b 1
+    )
+)
+
 REM Check if reportlab is installed (required for PDF creation)
 python -c "import reportlab" 2>nul
 if errorlevel 1 (
