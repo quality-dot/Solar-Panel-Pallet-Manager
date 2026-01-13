@@ -1186,57 +1186,82 @@ class PalletHistoryWindow:
         try:
             system = platform.system()
             if system == 'Windows':
-                # Windows: Use os.startfile with 'print' operation
-                # This is the most reliable way to open print dialog on Windows
-                try:
-                    # Method 1: os.startfile with 'print' operation
-                    # This tells Windows to open the file with the "print" verb
-                    # which should open the print dialog
-                    os.startfile(str(pdf_path.absolute()), 'print')
-                    
-                    # Show confirmation
-                    messagebox.showinfo(
-                        "PDF Created & Print Dialog Opening",
-                        f"PDF saved to:\n{pdf_path}\n\n"
-                        f"Print dialog is opening...\n"
-                        f"Complete the print settings and click Print.\n\n"
-                        f"(The PDF is saved for your records)",
-                        parent=self.window
-                    )
-                except Exception as e:
-                    # Fallback: Try PowerShell method
+                # Windows: Try multiple approaches to open print dialog
+                print_dialog_opened = False
+                
+                # Method 1: Check for common PDF viewers with print flags
+                pdf_viewers = [
+                    # SumatraPDF with print dialog flag
+                    (r"C:\Program Files\SumatraPDF\SumatraPDF.exe", ['-print-dialog']),
+                    (r"C:\Program Files (x86)\SumatraPDF\SumatraPDF.exe", ['-print-dialog']),
+                    # Adobe Reader with /p (print) flag
+                    (r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe", ['/p']),
+                    (r"C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe", ['/p']),
+                    (r"C:\Program Files\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe", ['/p']),
+                ]
+                
+                for viewer_path, flags in pdf_viewers:
+                    if Path(viewer_path).exists():
+                        try:
+                            subprocess.Popen([viewer_path] + flags + [str(pdf_path.absolute())],
+                                           creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0)
+                            print_dialog_opened = True
+                            messagebox.showinfo(
+                                "PDF Created & Print Dialog Opening",
+                                f"PDF saved to:\n{pdf_path}\n\n"
+                                f"Print dialog is opening...\n"
+                                f"Adjust settings and click Print.",
+                                parent=self.window
+                            )
+                            break
+                        except Exception:
+                            continue
+                
+                # Method 2: Use Windows Edge browser with print flag (always available on Win10/11)
+                if not print_dialog_opened:
                     try:
-                        # Use PowerShell Start-Process with -Verb Print
-                        ps_command = f'Start-Process -FilePath "{pdf_path.absolute()}" -Verb Print'
-                        subprocess.Popen(
-                            ['powershell', '-NoProfile', '-Command', ps_command],
-                            shell=False,
-                            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
-                        )
+                        # Microsoft Edge can open PDFs and has a --print flag
+                        edge_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+                        if not Path(edge_path).exists():
+                            edge_path = r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+                        
+                        if Path(edge_path).exists():
+                            # Open PDF in Edge with print dialog
+                            subprocess.Popen([edge_path, '--print', str(pdf_path.absolute())],
+                                           creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0)
+                            print_dialog_opened = True
+                            messagebox.showinfo(
+                                "PDF Created & Print Dialog Opening",
+                                f"PDF saved to:\n{pdf_path}\n\n"
+                                f"Print dialog is opening in Edge...",
+                                parent=self.window
+                            )
+                    except Exception:
+                        pass
+                
+                # Fallback: Just open PDF and guide user
+                if not print_dialog_opened:
+                    try:
+                        os.startfile(str(pdf_path.absolute()))
                         messagebox.showinfo(
-                            "PDF Created & Print Dialog Opening",
+                            "PDF Created - Manual Print",
                             f"PDF saved to:\n{pdf_path}\n\n"
-                            f"Print dialog is opening...",
+                            f"✓ PDF opened in your default viewer\n\n"
+                            f"To print:\n"
+                            f"1. Press Ctrl+P in the PDF viewer\n"
+                            f"2. Adjust print settings\n"
+                            f"3. Click Print\n\n"
+                            f"(Automatic print dialog requires Adobe Reader,\n"
+                            f"SumatraPDF, or Microsoft Edge)",
                             parent=self.window
                         )
                     except Exception:
-                        # Last resort: Just open the PDF normally
-                        try:
-                            os.startfile(str(pdf_path.absolute()))
-                            messagebox.showinfo(
-                                "PDF Created",
-                                f"PDF saved to:\n{pdf_path}\n\n"
-                                f"PDF opened. Use Ctrl+P to print.\n\n"
-                                f"(Could not automatically open print dialog)",
-                                parent=self.window
-                            )
-                        except Exception:
-                            messagebox.showwarning(
-                                "PDF Created",
-                                f"PDF saved to:\n{pdf_path}\n\n"
-                                f"Please open the PDF manually to print.",
-                                parent=self.window
-                            )
+                        messagebox.showwarning(
+                            "PDF Saved",
+                            f"PDF saved to:\n{pdf_path}\n\n"
+                            f"Please navigate to the file and right-click → Print",
+                            parent=self.window
+                        )
             elif system == 'Darwin':  # macOS
                 # macOS: Open PDF and trigger print dialog with AppleScript
                 try:
