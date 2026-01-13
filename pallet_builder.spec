@@ -6,6 +6,7 @@ Build with: pyinstaller pallet_builder.spec
 
 import os
 import sys
+import subprocess
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
@@ -122,12 +123,28 @@ try:
 except ImportError as e:
     HAS_REPORTLAB = False
     print("=" * 70)
-    print("WARNING: reportlab not found. PDF creation will not work.")
+    print("ERROR: reportlab not found and is REQUIRED for PDF creation!")
     print("=" * 70)
-    print("Please install reportlab before building:")
-    print("  pip install reportlab")
-    print(f"Error: {e}")
+    print("Installing reportlab automatically...")
+    import subprocess
+    try:
+        # Try to install reportlab automatically
+        result = subprocess.run([sys.executable, '-m', 'pip', 'install', 'reportlab'], 
+                              capture_output=True, text=True, timeout=120)
+        if result.returncode == 0:
+            print("✓ reportlab installed successfully!")
+            print("Please run the build again.")
+        else:
+            print("✗ Failed to install reportlab automatically.")
+            print("\nPlease install manually:")
+            print("  python -m pip install reportlab")
+            print(f"\nError: {result.stderr}")
+    except Exception as install_error:
+        print(f"✗ Could not auto-install: {install_error}")
+        print("\nPlease install manually:")
+        print("  python -m pip install reportlab")
     print("=" * 70)
+    sys.exit(1)
 
 a = Analysis(
     ['app/pallet_builder_gui.py'],
