@@ -1084,7 +1084,96 @@ class PalletHistoryWindow:
                                parent=self.window)
     
     def _excel_to_pdf(self, excel_files: List[Path], pdf_path: Path, progress_label: tk.Label):
-        """Convert Excel files to PDF using reportlab"""
+        """Convert Excel files to PDF - preserves exact Excel formatting"""
+        import tempfile
+        
+        # Try method 1: Excel COM automation (Windows only, pixel-perfect)
+        if platform.system() == 'Windows':
+            try:
+                return self._excel_to_pdf_com(excel_files, pdf_path, progress_label)
+            except Exception as e:
+                print(f"COM automation failed: {e}, falling back to reportlab")
+        
+        # Fallback: reportlab (cross-platform but basic formatting)
+        return self._excel_to_pdf_reportlab(excel_files, pdf_path, progress_label)
+    
+    def _excel_to_pdf_com(self, excel_files: List[Path], pdf_path: Path, progress_label: tk.Label):
+        """Convert Excel to PDF using Excel COM automation (Windows only)"""
+        import win32com.client
+        import pythoncom
+        import tempfile
+        
+        # Initialize COM
+        pythoncom.CoInitialize()
+        
+        try:
+            excel = win32com.client.Dispatch("Excel.Application")
+            excel.Visible = False
+            excel.DisplayAlerts = False
+            
+            # Create temporary PDFs for each Excel file
+            temp_pdfs = []
+            
+            for idx, excel_file in enumerate(excel_files, 1):
+                progress_label.config(text=f"Converting {idx}/{len(excel_files)}: {excel_file.name}")
+                progress_label.master.update()
+                
+                try:
+                    # Open workbook
+                    wb = excel.Workbooks.Open(str(excel_file.absolute()))
+                    
+                    # Find PALLET SHEET
+                    pallet_sheet = None
+                    for sheet in wb.Sheets:
+                        if sheet.Name.upper().replace(' ', '') == 'PALLETSHEET':
+                            pallet_sheet = sheet
+                            break
+                    
+                    if pallet_sheet:
+                        # Export sheet to PDF
+                        temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+                        temp_pdf.close()
+                        
+                        # Excel's ExportAsFixedFormat creates pixel-perfect PDF
+                        pallet_sheet.ExportAsFixedFormat(
+                            Type=0,  # xlTypePDF
+                            Filename=temp_pdf.name,
+                            Quality=0,  # xlQualityStandard
+                            IncludeDocProperties=True,
+                            IgnorePrintAreas=False
+                        )
+                        
+                        temp_pdfs.append(temp_pdf.name)
+                    
+                    wb.Close(SaveChanges=False)
+                    
+                except Exception as e:
+                    print(f"Error converting {excel_file.name}: {e}")
+                    continue
+            
+            excel.Quit()
+            
+            # If we have multiple PDFs, merge them
+            if len(temp_pdfs) > 1:
+                self._merge_pdfs(temp_pdfs, pdf_path)
+                # Clean up temp files
+                for temp_pdf in temp_pdfs:
+                    try:
+                        Path(temp_pdf).unlink()
+                    except:
+                        pass
+            elif len(temp_pdfs) == 1:
+                # Just rename the single PDF
+                import shutil
+                shutil.move(temp_pdfs[0], pdf_path)
+            else:
+                raise Exception("No PDFs were created")
+                
+        finally:
+            pythoncom.CoUninitialize()
+    
+    def _excel_to_pdf_reportlab(self, excel_files: List[Path], pdf_path: Path, progress_label: tk.Label):
+        """Convert Excel files to PDF using reportlab (fallback method)"""
         from openpyxl import load_workbook
         from reportlab.lib.pagesizes import letter, landscape
         from reportlab.pdfgen import canvas
@@ -1181,6 +1270,36 @@ class PalletHistoryWindow:
                 continue
         
         c.save()
+    
+    def _merge_pdfs(self, pdf_files: List[str], output_path: Path):
+        """Merge multiple PDF files into one"""
+        try:
+            from PyPDF2 import PdfMerger
+            
+            merger = PdfMerger()
+            for pdf_file in pdf_files:
+                merger.append(pdf_file)
+            
+            merger.write(str(output_path))
+            merger.close()
+            
+        except ImportError:
+            # PyPDF2 not available, try pypdf instead
+            try:
+                from pypdf import PdfMerger
+                
+                merger = PdfMerger()
+                for pdf_file in pdf_files:
+                    merger.append(pdf_file)
+                
+                merger.write(str(output_path))
+                merger.close()
+                
+            except ImportError:
+                # No PDF merger available, just use the first PDF
+                import shutil
+                if pdf_files:
+                    shutil.copy(pdf_files[0], output_path)
     
     def _print_pdf(self, pdf_path: Path):
         """Print PDF file - automatically opens print dialog for the saved PDF"""

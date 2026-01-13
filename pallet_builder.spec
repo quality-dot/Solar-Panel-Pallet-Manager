@@ -188,6 +188,14 @@ a = Analysis(
         'secrets',
         'hashlib',
         'hmac',
+        # Windows COM automation for Excel PDF export
+        'win32com',
+        'win32com.client',
+        'pythoncom',
+        'pywintypes',
+        # PDF manipulation
+        'PyPDF2',
+        'pypdf',
         # pandas - Data processing
         'pandas',
         'pandas._libs',

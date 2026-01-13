@@ -11,7 +11,7 @@ REM Install all required dependencies automatically
 echo Installing required dependencies...
 echo.
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install -U openpyxl pandas reportlab jinja2 Pillow
+python -m pip install -U openpyxl pandas reportlab jinja2 Pillow pywin32 PyPDF2
 echo.
 
 REM Check if openpyxl is installed (REQUIRED - Excel operations)
