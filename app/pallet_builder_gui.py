@@ -2071,31 +2071,8 @@ class PalletBuilderGUI:
             )
             return
         
-        # Update active customer display
+        # Update active customer display (do this AFTER export to avoid blocking)
         self.active_customer_display = customer_display_name
-        if self.active_customer_var:
-            # Check if customer exists in current menu, if not refresh menu first
-            menu_values = []
-            try:
-                menu = self.active_customer_menu["menu"]
-                menu_index = 0
-                while True:
-                    try:
-                        label = menu.entrycget(menu_index, "label")
-                        menu_values.append(label)
-                        menu_index += 1
-                    except tk.TclError:
-                        break
-            except Exception:
-                pass
-            
-            if customer_display_name not in menu_values:
-                # Force refresh if customer not in menu
-                self._update_customer_menu(force_refresh=True)
-            
-            # Only set if different to avoid triggering unnecessary updates
-            if self.active_customer_var.get() != customer_display_name:
-                self.active_customer_var.set(customer_display_name)
         result = messagebox.askyesnocancel(
             "Export Pallet",
             f"Export Pallet #{pallet_number}?\n\n"
@@ -2183,6 +2160,34 @@ class PalletBuilderGUI:
             
             # Force UI update before showing message box
             self.root.update_idletasks()
+            
+            # Update customer menu now (after export, non-blocking)
+            if self.active_customer_var and self.active_customer_display:
+                try:
+                    # Check if customer exists in menu
+                    menu_values = []
+                    try:
+                        menu = self.active_customer_menu["menu"]
+                        menu_index = 0
+                        while True:
+                            try:
+                                label = menu.entrycget(menu_index, "label")
+                                menu_values.append(label)
+                                menu_index += 1
+                            except tk.TclError:
+                                break
+                    except Exception:
+                        pass
+                    
+                    if self.active_customer_display not in menu_values:
+                        # Refresh menu if customer not in it
+                        self._update_customer_menu(force_refresh=True)
+                    
+                    # Set customer in dropdown
+                    if self.active_customer_var.get() != self.active_customer_display:
+                        self.active_customer_var.set(self.active_customer_display)
+                except Exception as e:
+                    print(f"Warning: Could not update customer menu: {e}")
             
             # Show success message AFTER UI is updated
             messagebox.showinfo(
