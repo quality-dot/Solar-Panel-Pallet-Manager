@@ -84,6 +84,53 @@ REM Update PyInstaller and hooks to latest versions
 echo Updating PyInstaller and hooks...
 python -m pip install -U pyinstaller pyinstaller-hooks-contrib
 
+REM Check for SumatraPDF and download if missing
+echo.
+echo Checking for SumatraPDF...
+if not exist "external_tools\SumatraPDF\SumatraPDF.exe" (
+    echo SumatraPDF not found. Downloading automatically...
+    echo.
+    
+    REM Create directory if it doesn't exist
+    if not exist "external_tools\SumatraPDF" mkdir "external_tools\SumatraPDF"
+    
+    REM Download SumatraPDF portable using PowerShell
+    echo Downloading SumatraPDF 3.5.2 (64-bit portable)...
+    powershell -NoProfile -Command "& { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/sumatrapdfreader/sumatrapdf/releases/download/3.5.2rel/SumatraPDF-3.5.2-64.zip' -OutFile 'external_tools\SumatraPDF\SumatraPDF.zip' -UseBasicParsing }"
+    
+    if errorlevel 1 (
+        echo WARNING: Failed to download SumatraPDF automatically.
+        echo Build will continue without it, but automatic print dialog won't work.
+        echo.
+        echo To enable automatic print dialog:
+        echo 1. Download from: https://www.sumatrapdfreader.org/download-free-pdf-viewer
+        echo 2. Place SumatraPDF.exe in external_tools\SumatraPDF\
+        echo 3. Rebuild
+        echo.
+    ) else (
+        echo Extracting SumatraPDF...
+        powershell -NoProfile -Command "& { Expand-Archive -Path 'external_tools\SumatraPDF\SumatraPDF.zip' -DestinationPath 'external_tools\SumatraPDF' -Force }"
+        
+        REM Clean up zip file
+        del "external_tools\SumatraPDF\SumatraPDF.zip" 2>nul
+        
+        if exist "external_tools\SumatraPDF\SumatraPDF.exe" (
+            echo.
+            echo ✓ SumatraPDF downloaded and extracted successfully!
+            echo   Automatic print dialog will be enabled.
+            echo.
+        ) else (
+            echo WARNING: SumatraPDF extraction may have failed.
+            echo Build will continue, but automatic print dialog might not work.
+            echo.
+        )
+    )
+) else (
+    echo ✓ SumatraPDF found: external_tools\SumatraPDF\SumatraPDF.exe
+    echo   Will bundle for automatic print dialog support.
+    echo.
+)
+
 REM Clean up old build artifacts to ensure fresh build
 echo.
 echo Cleaning old build artifacts...

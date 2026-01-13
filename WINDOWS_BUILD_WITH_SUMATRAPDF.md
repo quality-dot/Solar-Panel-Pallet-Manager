@@ -15,48 +15,54 @@ This guide explains how to build Pallet Manager with bundled SumatraPDF for auto
 - ✅ Handles batch printing elegantly
 - ✅ No installation required for end users
 
-## Setup Instructions
+## Setup Instructions (AUTOMATIC!)
 
-### Step 1: Download SumatraPDF (Portable)
+### Just Build - That's It!
 
-1. Go to: https://www.sumatrapdfreader.org/download-free-pdf-viewer
-2. Download the **64-bit portable version**: `SumatraPDF-3.5.2-64.zip` (or latest)
-3. Extract the ZIP file
-
-### Step 2: Place in Project Structure
-
-Copy `SumatraPDF.exe` to the correct location:
-
-```
-Pallet Manager 1.1/
-├── external_tools/
-│   ├── README.md
-│   └── SumatraPDF/
-│       └── SumatraPDF.exe  ← PUT IT HERE
-```
-
-### Step 3: Build
-
-Run the normal Windows build:
+Run the Windows build:
 
 ```cmd
 cd "C:\path\to\Pallet Manager 1.1"
 scripts\build_windows.bat
 ```
 
-The build script will automatically:
-- ✅ Detect SumatraPDF.exe
-- ✅ Bundle it into the .exe
-- ✅ Configure the app to use it
+**The build script automatically:**
+1. ✅ Checks if SumatraPDF is present
+2. ✅ Downloads it from GitHub if missing (portable version)
+3. ✅ Extracts it to the correct location
+4. ✅ Bundles it into your .exe
+5. ✅ Configures the app to use it
 
-### Step 4: Verify
+**No manual steps required!** 🎉
 
-After building, you'll see in the build output:
+### What You'll See:
 
+**First build (no SumatraPDF yet):**
 ```
-✓ Found SumatraPDF: external_tools\SumatraPDF\SumatraPDF.exe
-  Will bundle for automatic print dialog support
+Checking for SumatraPDF...
+SumatraPDF not found. Downloading automatically...
+Downloading SumatraPDF 3.5.2 (64-bit portable)...
+Extracting SumatraPDF...
+
+✓ SumatraPDF downloaded and extracted successfully!
+  Automatic print dialog will be enabled.
 ```
+
+**Subsequent builds:**
+```
+Checking for SumatraPDF...
+✓ SumatraPDF found: external_tools\SumatraPDF\SumatraPDF.exe
+  Will bundle for automatic print dialog support.
+```
+
+### Manual Download (If Auto-Download Fails)
+
+If the automatic download fails (firewall/proxy):
+
+1. Go to: https://www.sumatrapdfreader.org/download-free-pdf-viewer
+2. Download the **64-bit portable version**: `SumatraPDF-3.5.2-64.zip`
+3. Extract and place `SumatraPDF.exe` in: `external_tools\SumatraPDF\SumatraPDF.exe`
+4. Rebuild
 
 ## What Happens at Runtime?
 
