@@ -3015,17 +3015,6 @@ class PalletBuilderGUI:
         
         dialog.after(10, load_async)
         
-        # Add Refresh button below list
-        button_row = tk.Frame(list_inner, bg=bg_section)
-        button_row.pack(fill=tk.X, pady=(10, 0))
-        
-        refresh_list_btn = tk.Button(button_row, text="🔄 Refresh List", 
-                                     command=refresh_listbox, width=20,
-                                     bg="#FF9800", fg="white", font=("Arial", 11, "bold"),
-                                     activebackground="#F57C00", activeforeground="white",
-                                     relief=tk.RAISED, bd=3, cursor="hand2")
-        refresh_list_btn.pack(side=tk.LEFT)
-        
         def open_excel_file():
             """Open Excel file for manual editing"""
             self.customer_manager.open_excel_file()
