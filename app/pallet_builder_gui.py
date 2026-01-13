@@ -2958,7 +2958,30 @@ class PalletBuilderGUI:
             title_fg = "#1976D2"
         
         dialog.config(bg=bg_main)
-        dialog.geometry("750x650+400+200")  # Larger and better positioned
+        
+        # Start with a reasonable size, then maximize
+        dialog.geometry("800x700")
+        
+        # Maximize the window (platform-specific)
+        try:
+            if platform.system() == 'Windows':
+                dialog.state('zoomed')
+            elif platform.system() == 'Darwin':  # macOS
+                # Manual maximization for macOS (more reliable than zoomed)
+                dialog.update_idletasks()
+                screen_width = dialog.winfo_screenwidth()
+                screen_height = dialog.winfo_screenheight()
+                # Leave small margin for dock/menu bar
+                dialog.geometry(f"{screen_width-20}x{screen_height-100}+10+50")
+            else:  # Linux
+                try:
+                    dialog.attributes('-zoomed', 1)
+                except:
+                    pass
+        except Exception as e:
+            print(f"Could not maximize Customer Management window: {e}")
+            # Fallback to large fixed size if maximization fails
+            dialog.geometry("1000x800+100+50")
         
         # Main container
         main_frame = tk.Frame(dialog, bg=bg_main)

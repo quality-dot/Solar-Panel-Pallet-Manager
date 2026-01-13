@@ -37,7 +37,31 @@ class PalletHistoryWindow:
         from app.version import get_version
         version = get_version()
         self.window.title(f"Pallet History - {version}")
+        
+        # Start with a reasonable size
         self.window.geometry("900x700")
+        
+        # Maximize the window (platform-specific)
+        import platform
+        try:
+            if platform.system() == 'Windows':
+                self.window.state('zoomed')
+            elif platform.system() == 'Darwin':  # macOS
+                # Manual maximization for macOS (more reliable than zoomed)
+                self.window.update_idletasks()
+                screen_width = self.window.winfo_screenwidth()
+                screen_height = self.window.winfo_screenheight()
+                # Leave small margin for dock/menu bar
+                self.window.geometry(f"{screen_width-20}x{screen_height-100}+10+50")
+            else:  # Linux
+                try:
+                    self.window.attributes('-zoomed', 1)
+                except:
+                    pass
+        except Exception as e:
+            print(f"Could not maximize History window: {e}")
+            # Fallback to large fixed size if maximization fails
+            self.window.geometry("1200x900+50+50")
         
         self.selected_pallet: Optional[dict] = None
         self.checkbox_states: dict = {}  # Track checkbox states for each pallet
