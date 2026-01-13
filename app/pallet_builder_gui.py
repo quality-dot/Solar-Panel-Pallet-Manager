@@ -2165,32 +2165,32 @@ class PalletBuilderGUI:
                 )
                 return
             
-            # Show success message
-            messagebox.showinfo(
-                "Pallet Exported",
-                f"Pallet #{self.current_pallet['pallet_number']} exported successfully!\n\n"
-                f"File: {export_path.name}",
-                parent=self.root
-            )
-            
-            # Clear the display but do NOT automatically start new pallet
-            # User must manually clear/restart if needed
+            # Clear the pallet BEFORE showing message box (prevents UI lag)
+            pallet_num = self.current_pallet['pallet_number']
+            file_name = export_path.name
             self.current_pallet = None
             
-            # Hide action buttons (clears "Pallet is full!" message)
+            # Update UI immediately (don't wait for message box)
             self.hide_action_buttons()
-            
-            # Update slot display to show empty slots (force update to ensure rendering)
-            self.update_slot_display(force_update=True)
+            self.update_slot_display(force_update=False)  # Don't force - let it update async
             
             if self.status_label:
                 self.status_label.config(text="Pallet exported. Ready for next pallet.", fg="green")
             if self.export_button:
                 self.export_button.config(state=tk.DISABLED)
-            
-            # Update pallet number display to show no pallet
             if self.pallet_label:
                 self.pallet_label.config(text="#--")
+            
+            # Force UI update before showing message box
+            self.root.update_idletasks()
+            
+            # Show success message AFTER UI is updated
+            messagebox.showinfo(
+                "Pallet Exported",
+                f"Pallet #{pallet_num} exported successfully!\n\n"
+                f"File: {file_name}",
+                parent=self.root
+            )
             
         except FileNotFoundError as e:
             messagebox.showerror(
