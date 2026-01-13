@@ -2161,41 +2161,27 @@ class PalletBuilderGUI:
             # Force UI update before showing message box
             self.root.update_idletasks()
             
-            # Update customer menu now (after export, non-blocking)
-            if self.active_customer_var and self.active_customer_display:
-                try:
-                    # Check if customer exists in menu
-                    menu_values = []
-                    try:
-                        menu = self.active_customer_menu["menu"]
-                        menu_index = 0
-                        while True:
-                            try:
-                                label = menu.entrycget(menu_index, "label")
-                                menu_values.append(label)
-                                menu_index += 1
-                            except tk.TclError:
-                                break
-                    except Exception:
-                        pass
-                    
-                    if self.active_customer_display not in menu_values:
-                        # Refresh menu if customer not in it
-                        self._update_customer_menu(force_refresh=True)
-                    
-                    # Set customer in dropdown
-                    if self.active_customer_var.get() != self.active_customer_display:
-                        self.active_customer_var.set(self.active_customer_display)
-                except Exception as e:
-                    print(f"Warning: Could not update customer menu: {e}")
-            
-            # Show success message AFTER UI is updated
+            # Show success message first (non-blocking)
             messagebox.showinfo(
                 "Pallet Exported",
                 f"Pallet #{pallet_num} exported successfully!\n\n"
                 f"File: {file_name}",
                 parent=self.root
             )
+            
+            # Update customer menu asynchronously (after message box is dismissed)
+            # This prevents UI freezing
+            def update_customer_menu_async():
+                if self.active_customer_var and self.active_customer_display:
+                    try:
+                        # Just set the customer directly - don't validate menu
+                        if self.active_customer_var.get() != self.active_customer_display:
+                            self.active_customer_var.set(self.active_customer_display)
+                    except Exception as e:
+                        print(f"Warning: Could not update customer menu: {e}")
+            
+            # Schedule menu update for after message box closes (50ms delay)
+            self.root.after(50, update_customer_menu_async)
             
         except FileNotFoundError as e:
             messagebox.showerror(
