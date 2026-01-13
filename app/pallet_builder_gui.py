@@ -2966,11 +2966,16 @@ class PalletBuilderGUI:
     def show_settings(self):
         """Show customer management window (singleton behavior)"""
         # Check if customer management window already exists
-        if self.customer_window and self.customer_window.winfo_exists():
-            # Window exists, bring it to front
-            self.customer_window.lift()
-            self.customer_window.focus_force()
-            return
+        if self.customer_window:
+            try:
+                if self.customer_window.winfo_exists():
+                    # Window exists, bring it to front
+                    self.customer_window.lift()
+                    self.customer_window.focus_force()
+                    return
+            except tk.TclError:
+                # Window was destroyed, clear reference
+                self.customer_window = None
 
         self.customer_window = dialog = tk.Toplevel(self.root)
         from app.version import get_version
@@ -3364,11 +3369,16 @@ class PalletBuilderGUI:
                 return
 
             # Check if history window already exists
-            if self.history_window and self.history_window.winfo_exists():
-                # Window exists, bring it to front
-                self.history_window.lift()
-                self.history_window.focus_force()
-                return
+            if self.history_window:
+                try:
+                    if self.history_window.winfo_exists():
+                        # Window exists, bring it to front
+                        self.history_window.lift()
+                        self.history_window.focus_force()
+                        return
+                except tk.TclError:
+                    # Window was destroyed, clear reference
+                    self.history_window = None
 
             # Create new window
             self._create_history_window()
