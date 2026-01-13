@@ -709,3 +709,4 @@ If issues persist after debugging:
 **For:** Pallet Manager v1.1
 **Platform:** Windows (Primary Target)
 
+

@@ -146,6 +146,21 @@ except ImportError as e:
     print("=" * 70)
     sys.exit(1)
 
+# Check for SumatraPDF (optional but recommended for Windows)
+sumatra_exe = project_root / 'external_tools' / 'SumatraPDF' / 'SumatraPDF.exe'
+sumatra_datas = []
+if sumatra_exe.exists():
+    print(f"✓ Found SumatraPDF: {sumatra_exe}")
+    print(f"  Will bundle for automatic print dialog support")
+    sumatra_datas = [(str(sumatra_exe), 'external_tools')]
+else:
+    print("ℹ SumatraPDF not found (optional)")
+    print("  To enable automatic print dialog on Windows:")
+    print("  1. Download portable SumatraPDF from https://www.sumatrapdfreader.org/")
+    print("  2. Place SumatraPDF.exe in external_tools/SumatraPDF/")
+    print("  3. Rebuild")
+    print("  App will fall back to Edge/Adobe Reader/default viewer")
+
 a = Analysis(
     ['app/pallet_builder_gui.py'],
     pathex=[],
@@ -156,7 +171,7 @@ a = Analysis(
         # Include icons for window icon (taskbar/dock)
         (str(icon_ico), 'icons'),
         (str(icon_icns), 'icons'),
-    ] + openpyxl_datas + reportlab_datas,  # Add collected openpyxl and reportlab data files
+    ] + sumatra_datas + openpyxl_datas + reportlab_datas,  # Add SumatraPDF, openpyxl and reportlab data files
     hiddenimports=[
         # App modules - must be explicitly included
         'app',

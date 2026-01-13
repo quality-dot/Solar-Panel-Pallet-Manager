@@ -518,3 +518,4 @@ Try these in order:
 **Last Updated:** January 9, 2026  
 **For:** Pallet Manager v1.1 Windows Build
 
+

@@ -269,3 +269,4 @@ Remove or comment out the debug print statements in `app/pallet_builder_gui.py`:
 **Last Updated:** January 9, 2026
 **Status:** macOS ✅ | Windows ⏳ NEEDS TESTING
 
+

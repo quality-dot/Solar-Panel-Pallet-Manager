@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import subprocess
 import platform
 import os
+import sys
 
 from app.pallet_manager import PalletManager
 from app.path_utils import get_base_dir
@@ -1189,21 +1190,23 @@ class PalletHistoryWindow:
                 # Windows: Try multiple approaches to open print dialog
                 print_dialog_opened = False
                 
-                # Method 1: Check for common PDF viewers with print flags
-                pdf_viewers = [
-                    # SumatraPDF with print dialog flag
-                    (r"C:\Program Files\SumatraPDF\SumatraPDF.exe", ['-print-dialog']),
-                    (r"C:\Program Files (x86)\SumatraPDF\SumatraPDF.exe", ['-print-dialog']),
-                    # Adobe Reader with /p (print) flag
-                    (r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe", ['/p']),
-                    (r"C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe", ['/p']),
-                    (r"C:\Program Files\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe", ['/p']),
-                ]
-                
-                for viewer_path, flags in pdf_viewers:
-                    if Path(viewer_path).exists():
+                # Method 1: Check for bundled SumatraPDF first (PRIORITY)
+                # This is bundled with the app for reliable print dialog
+                bundled_sumatra = None
+                try:
+                    # Check if running from PyInstaller bundle
+                    if getattr(sys, 'frozen', False):
+                        # Running as compiled exe
+                        if hasattr(sys, '_MEIPASS'):
+                            # PyInstaller onefile - extract from temp
+                            bundled_sumatra = Path(sys._MEIPASS) / 'external_tools' / 'SumatraPDF.exe'
+                        else:
+                            # PyInstaller onedir
+                            bundled_sumatra = Path(sys.executable).parent / 'external_tools' / 'SumatraPDF.exe'
+                    
+                    if bundled_sumatra and bundled_sumatra.exists():
                         try:
-                            subprocess.Popen([viewer_path] + flags + [str(pdf_path.absolute())],
+                            subprocess.Popen([str(bundled_sumatra), '-print-dialog', str(pdf_path.absolute())],
                                            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0)
                             print_dialog_opened = True
                             messagebox.showinfo(
@@ -1213,9 +1216,39 @@ class PalletHistoryWindow:
                                 f"Adjust settings and click Print.",
                                 parent=self.window
                             )
-                            break
-                        except Exception:
-                            continue
+                        except Exception as e:
+                            print(f"Bundled SumatraPDF failed: {e}")
+                except Exception as e:
+                    print(f"Error checking for bundled SumatraPDF: {e}")
+                
+                # Method 2: Check for installed PDF viewers with print flags
+                if not print_dialog_opened:
+                    pdf_viewers = [
+                        # Installed SumatraPDF
+                        (r"C:\Program Files\SumatraPDF\SumatraPDF.exe", ['-print-dialog']),
+                        (r"C:\Program Files (x86)\SumatraPDF\SumatraPDF.exe", ['-print-dialog']),
+                        # Adobe Reader with /p (print) flag
+                        (r"C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe", ['/p']),
+                        (r"C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe", ['/p']),
+                        (r"C:\Program Files\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe", ['/p']),
+                    ]
+                    
+                    for viewer_path, flags in pdf_viewers:
+                        if Path(viewer_path).exists():
+                            try:
+                                subprocess.Popen([viewer_path] + flags + [str(pdf_path.absolute())],
+                                               creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0)
+                                print_dialog_opened = True
+                                messagebox.showinfo(
+                                    "PDF Created & Print Dialog Opening",
+                                    f"PDF saved to:\n{pdf_path}\n\n"
+                                    f"Print dialog is opening...\n"
+                                    f"Adjust settings and click Print.",
+                                    parent=self.window
+                                )
+                                break
+                            except Exception:
+                                continue
                 
                 # Method 2: Use Windows Edge browser with print flag (always available on Win10/11)
                 if not print_dialog_opened:

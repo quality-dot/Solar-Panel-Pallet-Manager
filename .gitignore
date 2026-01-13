@@ -114,3 +114,8 @@ ARCHIVE/**/*
 .taskmaster/state.json
 .taskmaster/reports/*
 !.taskmaster/reports/.gitkeep
+
+# External Tools (binaries)
+external_tools/SumatraPDF/*.exe
+external_tools/SumatraPDF/*.dll
+!external_tools/README.md
