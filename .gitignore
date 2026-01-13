@@ -89,6 +89,8 @@ Thumbs.db
 
 # Data directories (keep structure but ignore contents in git)
 EXCEL/*.xlsx
+!EXCEL/BUILD*.xlsx
+!EXCEL/CURRENT.xlsx
 EXCEL/backups/*
 !EXCEL/backups/.gitkeep
 PALLETS/**/*.xlsx
