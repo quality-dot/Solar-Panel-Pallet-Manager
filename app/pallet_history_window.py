@@ -1087,12 +1087,20 @@ class PalletHistoryWindow:
         """Convert Excel files to PDF - preserves exact Excel formatting"""
         import tempfile
         
-        # Try method 1: Excel COM automation (Windows only, pixel-perfect)
+        # Try method 1: Excel COM automation (Windows + Microsoft Excel)
         if platform.system() == 'Windows':
             try:
                 return self._excel_to_pdf_com(excel_files, pdf_path, progress_label)
             except Exception as e:
-                print(f"COM automation failed: {e}, falling back to reportlab")
+                print(f"Excel COM automation failed: {e}")
+                print("Trying LibreOffice...")
+        
+        # Try method 2: LibreOffice UNO (cross-platform, works with LibreOffice)
+        try:
+            return self._excel_to_pdf_libreoffice(excel_files, pdf_path, progress_label)
+        except Exception as e:
+            print(f"LibreOffice conversion failed: {e}")
+            print("Falling back to reportlab...")
         
         # Fallback: reportlab (cross-platform but basic formatting)
         return self._excel_to_pdf_reportlab(excel_files, pdf_path, progress_label)
@@ -1171,6 +1179,104 @@ class PalletHistoryWindow:
                 
         finally:
             pythoncom.CoUninitialize()
+    
+    def _excel_to_pdf_libreoffice(self, excel_files: List[Path], pdf_path: Path, progress_label: tk.Label):
+        """Convert Excel to PDF using LibreOffice (cross-platform)"""
+        import subprocess
+        import tempfile
+        
+        # Try to find LibreOffice
+        libreoffice_paths = []
+        
+        if platform.system() == 'Windows':
+            libreoffice_paths = [
+                r"C:\Program Files\LibreOffice\program\soffice.exe",
+                r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                r"C:\Program Files\LibreOffice 7\program\soffice.exe",
+                r"C:\Program Files\LibreOffice 24\program\soffice.exe",
+            ]
+        elif platform.system() == 'Darwin':  # macOS
+            libreoffice_paths = [
+                "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+            ]
+        else:  # Linux
+            libreoffice_paths = [
+                "/usr/bin/libreoffice",
+                "/usr/bin/soffice",
+            ]
+        
+        # Find available LibreOffice
+        soffice = None
+        for path in libreoffice_paths:
+            if Path(path).exists():
+                soffice = path
+                break
+        
+        if not soffice:
+            raise Exception("LibreOffice not found on system")
+        
+        print(f"Using LibreOffice: {soffice}")
+        
+        # Create temporary PDFs for each Excel file
+        temp_pdfs = []
+        temp_dir = tempfile.mkdtemp()
+        
+        try:
+            for idx, excel_file in enumerate(excel_files, 1):
+                progress_label.config(text=f"Converting {idx}/{len(excel_files)}: {excel_file.name}")
+                progress_label.master.update()
+                
+                # LibreOffice command to convert to PDF
+                # --headless: run without GUI
+                # --convert-to pdf: convert to PDF format
+                # --outdir: output directory
+                cmd = [
+                    soffice,
+                    '--headless',
+                    '--convert-to', 'pdf',
+                    '--outdir', temp_dir,
+                    str(excel_file.absolute())
+                ]
+                
+                # Run conversion
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=60  # 60 second timeout per file
+                )
+                
+                if result.returncode != 0:
+                    print(f"LibreOffice conversion failed for {excel_file.name}")
+                    print(f"Error: {result.stderr}")
+                    continue
+                
+                # Find the generated PDF
+                pdf_name = excel_file.stem + '.pdf'
+                temp_pdf = Path(temp_dir) / pdf_name
+                
+                if temp_pdf.exists():
+                    temp_pdfs.append(str(temp_pdf))
+                else:
+                    print(f"PDF not generated for {excel_file.name}")
+            
+            if not temp_pdfs:
+                raise Exception("No PDFs were created by LibreOffice")
+            
+            # Merge or copy PDFs
+            if len(temp_pdfs) > 1:
+                self._merge_pdfs(temp_pdfs, pdf_path)
+            else:
+                import shutil
+                shutil.copy(temp_pdfs[0], pdf_path)
+                
+        finally:
+            # Clean up temp directory
+            import shutil
+            try:
+                shutil.rmtree(temp_dir)
+            except:
+                pass
     
     def _excel_to_pdf_reportlab(self, excel_files: List[Path], pdf_path: Path, progress_label: tk.Label):
         """Convert Excel files to PDF using reportlab (fallback method)"""
