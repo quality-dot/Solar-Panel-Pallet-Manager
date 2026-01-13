@@ -1196,30 +1196,42 @@ class PalletHistoryWindow:
                 try:
                     # Check if running from PyInstaller bundle
                     if getattr(sys, 'frozen', False):
+                        print(f"DEBUG: Running as frozen exe")
                         # Running as compiled exe
                         if hasattr(sys, '_MEIPASS'):
                             # PyInstaller onefile - extract from temp
                             bundled_sumatra = Path(sys._MEIPASS) / 'external_tools' / 'SumatraPDF.exe'
+                            print(f"DEBUG: Onefile mode - checking: {bundled_sumatra}")
                         else:
                             # PyInstaller onedir
                             bundled_sumatra = Path(sys.executable).parent / 'external_tools' / 'SumatraPDF.exe'
+                            print(f"DEBUG: Onedir mode - checking: {bundled_sumatra}")
+                    else:
+                        print(f"DEBUG: Running from source (not frozen)")
                     
-                    if bundled_sumatra and bundled_sumatra.exists():
-                        try:
-                            subprocess.Popen([str(bundled_sumatra), '-print-dialog', str(pdf_path.absolute())],
-                                           creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0)
-                            print_dialog_opened = True
-                            messagebox.showinfo(
-                                "PDF Created & Print Dialog Opening",
-                                f"PDF saved to:\n{pdf_path}\n\n"
-                                f"Print dialog is opening...\n"
-                                f"Adjust settings and click Print.",
-                                parent=self.window
-                            )
-                        except Exception as e:
-                            print(f"Bundled SumatraPDF failed: {e}")
+                    if bundled_sumatra:
+                        print(f"DEBUG: Bundled SumatraPDF path: {bundled_sumatra}")
+                        print(f"DEBUG: Exists? {bundled_sumatra.exists()}")
+                        if bundled_sumatra.exists():
+                            print(f"DEBUG: Attempting to launch SumatraPDF...")
+                            try:
+                                subprocess.Popen([str(bundled_sumatra), '-print-dialog', str(pdf_path.absolute())],
+                                               creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0)
+                                print_dialog_opened = True
+                                print(f"DEBUG: SumatraPDF launched successfully!")
+                                messagebox.showinfo(
+                                    "PDF Created & Print Dialog Opening",
+                                    f"PDF saved to:\n{pdf_path}\n\n"
+                                    f"Print dialog is opening...\n"
+                                    f"Adjust settings and click Print.",
+                                    parent=self.window
+                                )
+                            except Exception as e:
+                                print(f"DEBUG: Bundled SumatraPDF failed to launch: {e}")
+                        else:
+                            print(f"DEBUG: Bundled SumatraPDF not found at expected location")
                 except Exception as e:
-                    print(f"Error checking for bundled SumatraPDF: {e}")
+                    print(f"DEBUG: Error checking for bundled SumatraPDF: {e}")
                 
                 # Method 2: Check for installed PDF viewers with print flags
                 if not print_dialog_opened:
