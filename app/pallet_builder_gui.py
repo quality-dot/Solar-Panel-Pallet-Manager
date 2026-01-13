@@ -3250,38 +3250,28 @@ class PalletBuilderGUI:
         # Info label
         info_label = tk.Label(main_frame, 
                              text="💡 Tip: You can edit customers directly in Excel.\n"
-                                  "Click 'Open Excel File' to edit, then click '🔄 Refresh' or '🔄 Refresh List' to update.",
-                             font=("Arial", 8), fg="gray", bg="white", justify=tk.LEFT)
+                                  "Click 'Open Excel File' to edit, then click '🔄 Refresh List' to update.",
+                             font=("Arial", 8), fg="gray", bg=bg_main, justify=tk.LEFT)
         info_label.pack(pady=(0, 10))
         
-        # Buttons
-        button_frame = tk.Frame(main_frame, bg="white")
+        # Action Buttons (simplified - single row)
+        button_frame = tk.Frame(main_frame, bg=bg_main)
         button_frame.pack(fill=tk.X, pady=(10, 0))
         
-        tk.Button(button_frame, text="Open Excel File", command=open_excel_file, 
-                 width=15, bg="#2196F3", fg="white", font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="🔄 Refresh List", command=refresh_listbox, 
-                 width=15, bg="#FF9800", fg="white", font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=5)
-        
-        # Additional Actions Section
-        actions_frame = tk.LabelFrame(main_frame, text=" Actions ", 
-                                     font=("Arial", 11, "bold"), bg=bg_section, fg=fg_text,
-                                     relief=tk.GROOVE, bd=2)
-        actions_frame.pack(fill=tk.X, pady=(0, 15))
-        
-        actions_inner = tk.Frame(actions_frame, bg=bg_section)
-        actions_inner.pack(padx=10, pady=10)
-        
-        tk.Button(actions_inner, text="📋 Open Excel File", 
-                 command=open_excel_file, width=22,
-                 bg="#2196F3", fg="white", font=("Arial", 11, "bold"),
-                 relief=tk.RAISED, bd=3,
+        tk.Button(button_frame, text="📋 Open Excel File", command=open_excel_file, 
+                 width=18, bg="#2196F3", fg="white", font=("Arial", 10, "bold"),
+                 relief=tk.RAISED, bd=2,
                  activebackground="#1565C0", activeforeground="white", cursor="hand2").pack(side=tk.LEFT, padx=5)
         
-        tk.Button(actions_inner, text="❌ Remove Selected", 
-                 command=remove_customer, width=22,
-                 bg="#F44336", fg="white", font=("Arial", 11, "bold"),
-                 relief=tk.RAISED, bd=3,
+        tk.Button(button_frame, text="🔄 Refresh List", command=refresh_listbox, 
+                 width=18, bg="#FF9800", fg="white", font=("Arial", 10, "bold"),
+                 relief=tk.RAISED, bd=2,
+                 activebackground="#F57C00", activeforeground="white", cursor="hand2").pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(button_frame, text="❌ Delete Selected", 
+                 command=remove_customer, width=18,
+                 bg="#F44336", fg="white", font=("Arial", 10, "bold"),
+                 relief=tk.RAISED, bd=2,
                  activebackground="#C62828", activeforeground="white", cursor="hand2").pack(side=tk.LEFT, padx=5)
         
         # Bottom button frame with Close button
