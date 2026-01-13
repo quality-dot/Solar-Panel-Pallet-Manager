@@ -2663,6 +2663,22 @@ class PalletBuilderGUI:
                     if idx % 3 == 0:
                         self.root.update_idletasks()
                 
+                # Ensure database is initialized before importing
+                if hasattr(self.serial_db, '_init_deferred') and self.serial_db._init_deferred:
+                    try:
+                        self.serial_db._ensure_database()
+                        self.serial_db._ensure_master_data_sheet()
+                        self.serial_db._init_deferred = False
+                    except Exception as e:
+                        messagebox.showerror(
+                            "Database Error",
+                            f"Could not initialize serial database:\n{e}\n\n"
+                            f"Expected location: PALLETS/serial_database.xlsx\n\n"
+                            "Please ensure the PALLETS folder exists and is writable.",
+                            parent=self.root
+                        )
+                        return
+                
                 # Import the file (this is a blocking operation, but we update UI between files)
                 try:
                     imported, updated, errors = self.serial_db.import_simulator_file(import_file)
@@ -2674,10 +2690,10 @@ class PalletBuilderGUI:
                     # Lightweight UI update every 3 files (reduce CPU usage by ~67%)
                     if idx % 3 == 0:
                         self.root.update_idletasks()
-                except FileNotFoundError:
-                    failed_files.append((import_file.name, "File not found"))
-                except PermissionError:
-                    failed_files.append((import_file.name, "File is locked or open in another application"))
+                except FileNotFoundError as e:
+                    failed_files.append((import_file.name, f"File not found: {e}"))
+                except PermissionError as e:
+                    failed_files.append((import_file.name, f"File is locked or permission denied: {e}"))
                 except Exception as e:
                     failed_files.append((import_file.name, str(e)))
                     all_errors.append(f"{import_file.name}: {e}")
