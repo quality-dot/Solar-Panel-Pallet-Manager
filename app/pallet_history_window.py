@@ -948,11 +948,24 @@ class PalletHistoryWindow:
         return selected_pallets
     
     def create_pdf_and_print(self):
-        """Create PDF from selected Excel files and print"""
+        """Create PDF from selected Excel files and print
+        
+        Optimized for low-end systems with comprehensive error handling
+        """
+        from app.debug_logger import get_logger
+        
+        logger = get_logger()
+        logger.section("PDF Export & Print Started")
+        logger.start_timer("pdf_export_total")
+        logger.log_memory_usage()
+        
         print("DEBUG: Create PDF & Print button clicked")  # Debug output
         selected_pallets = self.get_selected_pallets()
         
+        logger.info(f"Selected {len(selected_pallets)} pallets")
+        
         if not selected_pallets:
+            logger.warning("No pallets selected")
             messagebox.showwarning("No Selection", 
                                  "Please select one or more pallets first.\n\n"
                                  "Click the checkboxes to select pallets.",
@@ -1089,10 +1102,13 @@ class PalletHistoryWindow:
                 merged_pdf_path = print_folder / merged_pdf_name
                 
                 # Merge all individual PDFs
+                logger.start_timer("merge_pdfs")
                 self._merge_pdfs([str(p) for p in individual_pdfs], merged_pdf_path)
-                
-                progress_window.destroy()
-                
+                logger.end_timer("merge_pdfs")
+                logger.info(f"Merged PDF created: {merged_pdf_path}")
+            
+            progress_window.destroy()
+            
                 # Show success message
                 messagebox.showinfo(
                     "PDFs Created Successfully",
@@ -1105,16 +1121,32 @@ class PalletHistoryWindow:
                 )
                 
                 # Open print dialog for merged PDF only
+                logger.info("Opening print dialog for merged PDF")
                 self._print_pdf(merged_pdf_path)
             else:
                 progress_window.destroy()
                 
                 # Single PDF - just print it
+                logger.info(f"Opening print dialog for single PDF: {individual_pdfs[0]}")
                 self._print_pdf(individual_pdfs[0])
             
+            logger.end_timer("pdf_export_total")
+            logger.log_memory_usage()
+            logger.info("PDF export and print completed successfully")
+            
         except Exception as e:
+            logger.error(f"Failed to create PDF: {e}", exc_info=e)
+            logger.end_timer("pdf_export_total")
+            
+            if 'progress_window' in locals():
+                try:
+                    progress_window.destroy()
+                except:
+                    pass
+            
             messagebox.showerror("Error", 
-                               f"Failed to create PDF:\n{e}",
+                               f"Failed to create PDF:\n{e}\n\n"
+                               f"Check LOGS/ folder for details.",
                                parent=self.window)
     
     def _excel_to_pdf(self, excel_files: List[Path], pdf_path: Path, progress_label: tk.Label):
@@ -1144,29 +1176,52 @@ class PalletHistoryWindow:
         return self._excel_to_pdf_reportlab(excel_files, pdf_path, progress_label)
     
     def _excel_to_pdf_com(self, excel_files: List[Path], pdf_path: Path, progress_label: tk.Label):
-        """Convert Excel to PDF using Excel COM automation (Windows only)"""
+        """Convert Excel to PDF using Excel COM automation (Windows only)
+        
+        Optimized for low-end systems:
+        - Processes one file at a time
+        - Releases resources immediately
+        - Minimizes memory footprint
+        """
         import win32com.client
         import pythoncom
         import tempfile
+        import gc
+        from app.debug_logger import get_logger
+        
+        logger = get_logger()
+        logger.section("Excel COM PDF Export")
+        logger.info(f"Converting {len(excel_files)} files using Excel COM automation")
+        logger.start_timer("excel_com_total")
         
         # Initialize COM
         pythoncom.CoInitialize()
+        logger.debug("COM initialized")
         
         try:
+            logger.start_timer("excel_startup")
             excel = win32com.client.Dispatch("Excel.Application")
             excel.Visible = False
             excel.DisplayAlerts = False
+            excel.ScreenUpdating = False  # Performance: disable screen updates
+            excel.Calculation = -4135  # xlCalculationManual - disable auto-calculation
+            logger.end_timer("excel_startup")
+            logger.debug("Excel application started (invisible, no alerts, no calc)")
             
             # Create temporary PDFs for each Excel file
             temp_pdfs = []
             
             for idx, excel_file in enumerate(excel_files, 1):
+                logger.start_timer(f"convert_file_{idx}")
+                logger.info(f"Processing file {idx}/{len(excel_files)}: {excel_file.name}")
+                
                 progress_label.config(text=f"Converting {idx}/{len(excel_files)}: {excel_file.name}")
                 progress_label.master.update()
                 
                 try:
-                    # Open workbook
-                    wb = excel.Workbooks.Open(str(excel_file.absolute()))
+                    # Open workbook (read-only for performance)
+                    logger.debug(f"Opening workbook: {excel_file}")
+                    wb = excel.Workbooks.Open(str(excel_file.absolute()), ReadOnly=True, UpdateLinks=False)
                     
                     # Find PALLET SHEET
                     pallet_sheet = None
@@ -1176,33 +1231,53 @@ class PalletHistoryWindow:
                             break
                     
                     if pallet_sheet:
+                        logger.debug(f"Found PALLET SHEET: {pallet_sheet.Name}")
+                        
                         # Export sheet to PDF
                         temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
                         temp_pdf.close()
                         
+                        logger.start_timer(f"export_pdf_{idx}")
                         # Excel's ExportAsFixedFormat creates pixel-perfect PDF
                         pallet_sheet.ExportAsFixedFormat(
                             Type=0,  # xlTypePDF
                             Filename=temp_pdf.name,
-                            Quality=0,  # xlQualityStandard
-                            IncludeDocProperties=True,
-                            IgnorePrintAreas=False
+                            Quality=0,  # xlQualityStandard (best quality)
+                            IncludeDocProperties=False,  # Performance: skip properties
+                            IgnorePrintAreas=False,
+                            OpenAfterPublish=False  # Don't open PDF
                         )
+                        logger.end_timer(f"export_pdf_{idx}")
                         
                         temp_pdfs.append(temp_pdf.name)
+                        logger.debug(f"PDF created: {temp_pdf.name}")
+                    else:
+                        logger.warning(f"No PALLET SHEET found in {excel_file.name}")
                     
+                    # Close workbook immediately to free memory
                     wb.Close(SaveChanges=False)
+                    logger.debug("Workbook closed")
                     
                 except Exception as e:
-                    print(f"Error converting {excel_file.name}: {e}")
+                    logger.error(f"Error converting {excel_file.name}: {e}", exc_info=e)
                     continue
+                finally:
+                    logger.end_timer(f"convert_file_{idx}")
+                    # Force garbage collection after each file (low-end system optimization)
+                    gc.collect()
+                    logger.log_memory_usage()
             
+            logger.debug("Closing Excel application")
             excel.Quit()
+            del excel  # Explicitly delete Excel COM object
+            gc.collect()  # Force cleanup
+            logger.debug("Excel closed and resources freed")
             
             # Save individual PDFs with proper names (one per pallet)
             import shutil
             saved_pdfs = []
             
+            logger.info(f"Saving {len(temp_pdfs)} PDFs to final locations")
             for idx, (temp_pdf, excel_file) in enumerate(zip(temp_pdfs, excel_files)):
                 # Create filename based on Excel filename
                 pdf_name = excel_file.stem + '.pdf'
@@ -1216,22 +1291,42 @@ class PalletHistoryWindow:
                     counter += 1
                 
                 # Move temp PDF to final location
+                logger.debug(f"Moving {temp_pdf} -> {final_pdf_path}")
                 shutil.move(temp_pdf, final_pdf_path)
                 saved_pdfs.append(final_pdf_path)
             
             if not saved_pdfs:
+                logger.error("No PDFs were created!")
                 raise Exception("No PDFs were created")
+            
+            logger.end_timer("excel_com_total")
+            logger.info(f"Successfully created {len(saved_pdfs)} PDFs")
             
             # Return list of individual PDFs (don't merge here)
             return saved_pdfs
                 
         finally:
             pythoncom.CoUninitialize()
+            logger.debug("COM uninitialized")
+            gc.collect()  # Final cleanup
     
     def _excel_to_pdf_libreoffice(self, excel_files: List[Path], pdf_path: Path, progress_label: tk.Label):
-        """Convert Excel to PDF using LibreOffice (cross-platform)"""
+        """Convert Excel to PDF using LibreOffice (cross-platform)
+        
+        Optimized for low-end systems:
+        - Processes files sequentially
+        - Uses headless mode (no GUI overhead)
+        - Minimal resource usage
+        """
         import subprocess
         import tempfile
+        import gc
+        from app.debug_logger import get_logger
+        
+        logger = get_logger()
+        logger.section("LibreOffice PDF Export")
+        logger.info(f"Converting {len(excel_files)} files using LibreOffice")
+        logger.start_timer("libreoffice_total")
         
         # Try to find LibreOffice
         libreoffice_paths = []
@@ -1261,9 +1356,11 @@ class PalletHistoryWindow:
                 break
         
         if not soffice:
+            logger.error("LibreOffice not found on system")
+            logger.debug(f"Searched paths: {libreoffice_paths}")
             raise Exception("LibreOffice not found on system")
         
-        print(f"Using LibreOffice: {soffice}")
+        logger.info(f"Using LibreOffice: {soffice}")
         
         # Create temporary PDFs for each Excel file
         temp_pdfs = []
@@ -1271,32 +1368,48 @@ class PalletHistoryWindow:
         
         try:
             for idx, excel_file in enumerate(excel_files, 1):
+                logger.start_timer(f"convert_file_{idx}")
+                logger.info(f"Processing file {idx}/{len(excel_files)}: {excel_file.name}")
+                
                 progress_label.config(text=f"Converting {idx}/{len(excel_files)}: {excel_file.name}")
                 progress_label.master.update()
                 
                 # LibreOffice command to convert to PDF
-                # --headless: run without GUI
+                # --headless: run without GUI (performance)
                 # --convert-to pdf: convert to PDF format
                 # --outdir: output directory
+                # --norestore: don't restore previous session (performance)
                 cmd = [
                     soffice,
                     '--headless',
+                    '--norestore',
                     '--convert-to', 'pdf',
                     '--outdir', temp_dir,
                     str(excel_file.absolute())
                 ]
                 
-                # Run conversion
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=60  # 60 second timeout per file
-                )
+                logger.debug(f"Running command: {' '.join(cmd)}")
                 
-                if result.returncode != 0:
-                    print(f"LibreOffice conversion failed for {excel_file.name}")
-                    print(f"Error: {result.stderr}")
+                # Run conversion
+                try:
+                    result = subprocess.run(
+                        cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=120  # 2 minute timeout per file (generous for low-end systems)
+                    )
+                    
+                    if result.returncode != 0:
+                        logger.error(f"LibreOffice conversion failed for {excel_file.name}")
+                        logger.error(f"Return code: {result.returncode}")
+                        logger.error(f"stderr: {result.stderr}")
+                        logger.debug(f"stdout: {result.stdout}")
+                        continue
+                    
+                    logger.debug(f"LibreOffice stdout: {result.stdout}")
+                    
+                except subprocess.TimeoutExpired:
+                    logger.error(f"LibreOffice conversion timed out for {excel_file.name}")
                     continue
                 
                 # Find the generated PDF
@@ -1305,16 +1418,26 @@ class PalletHistoryWindow:
                 
                 if temp_pdf.exists():
                     temp_pdfs.append(str(temp_pdf))
+                    logger.debug(f"PDF created: {temp_pdf}")
                 else:
-                    print(f"PDF not generated for {excel_file.name}")
+                    logger.warning(f"PDF not generated for {excel_file.name}")
+                    logger.debug(f"Expected location: {temp_pdf}")
+                    logger.debug(f"Temp dir contents: {list(Path(temp_dir).glob('*'))}")
+                
+                logger.end_timer(f"convert_file_{idx}")
+                # Force garbage collection after each file
+                gc.collect()
+                logger.log_memory_usage()
             
             if not temp_pdfs:
+                logger.error("No PDFs were created by LibreOffice!")
                 raise Exception("No PDFs were created by LibreOffice")
             
             # Save individual PDFs with proper names (one per pallet)
             import shutil
             saved_pdfs = []
             
+            logger.info(f"Saving {len(temp_pdfs)} PDFs to final locations")
             for temp_pdf, excel_file in zip(temp_pdfs, excel_files):
                 # Create filename based on Excel filename
                 pdf_name = excel_file.stem + '.pdf'
@@ -1328,8 +1451,12 @@ class PalletHistoryWindow:
                     counter += 1
                 
                 # Copy temp PDF to final location
+                logger.debug(f"Copying {temp_pdf} -> {final_pdf_path}")
                 shutil.copy(temp_pdf, final_pdf_path)
                 saved_pdfs.append(final_pdf_path)
+            
+            logger.end_timer("libreoffice_total")
+            logger.info(f"Successfully created {len(saved_pdfs)} PDFs")
             
             # Return list of individual PDFs (don't merge here)
             return saved_pdfs
@@ -1337,10 +1464,14 @@ class PalletHistoryWindow:
         finally:
             # Clean up temp directory
             import shutil
+            logger.debug(f"Cleaning up temp directory: {temp_dir}")
             try:
                 shutil.rmtree(temp_dir)
-            except:
-                pass
+                logger.debug("Temp directory deleted")
+            except Exception as e:
+                logger.warning(f"Failed to delete temp directory: {e}")
+            
+            gc.collect()  # Final cleanup
     
     def _excel_to_pdf_reportlab(self, excel_files: List[Path], pdf_path: Path, progress_label: tk.Label):
         """Convert Excel files to PDF using reportlab (fallback method)"""
@@ -1518,8 +1649,8 @@ class PalletHistoryWindow:
                                     f"Print dialog is opening...\n"
                                     f"Adjust settings and click Print.",
                                     parent=self.window
-                                )
-                            except Exception as e:
+                    )
+                except Exception as e:
                                 print(f"DEBUG: Bundled SumatraPDF failed to launch: {e}")
                         else:
                             print(f"DEBUG: Bundled SumatraPDF not found at expected location")
@@ -1552,7 +1683,7 @@ class PalletHistoryWindow:
                                     parent=self.window
                                 )
                                 break
-                            except Exception:
+                    except Exception:
                                 continue
                 
                 # Method 2: Use Windows Edge browser with print flag (always available on Win10/11)
@@ -1568,12 +1699,12 @@ class PalletHistoryWindow:
                             subprocess.Popen([edge_path, '--print', str(pdf_path.absolute())],
                                            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0)
                             print_dialog_opened = True
-                            messagebox.showinfo(
+                        messagebox.showinfo(
                                 "PDF Created & Print Dialog Opening",
                                 f"PDF saved to:\n{pdf_path}\n\n"
                                 f"Print dialog is opening in Edge...",
-                                parent=self.window
-                            )
+                            parent=self.window
+                        )
                     except Exception:
                         pass
                 
@@ -1593,7 +1724,7 @@ class PalletHistoryWindow:
                             f"SumatraPDF, or Microsoft Edge)",
                             parent=self.window
                         )
-                    except Exception:
+                except Exception:
                         messagebox.showwarning(
                             "PDF Saved",
                             f"PDF saved to:\n{pdf_path}\n\n"
@@ -1607,23 +1738,23 @@ class PalletHistoryWindow:
                     subprocess.Popen(['open', '-a', 'Preview', str(pdf_path.absolute())])
                     
                     # Wait for Preview to open, then trigger print dialog
-                    import time
+                        import time
                     time.sleep(0.5)
                     
                     applescript = f'''
-                    tell application "Preview"
-                        activate
-                        delay 0.3
-                    end tell
-                    tell application "System Events"
-                        tell process "Preview"
-                            keystroke "p" using command down
+                        tell application "Preview"
+                            activate
+                            delay 0.3
                         end tell
-                    end tell
-                    '''
+                        tell application "System Events"
+                            tell process "Preview"
+                                keystroke "p" using command down
+                            end tell
+                        end tell
+                        '''
                     subprocess.Popen(['osascript', '-e', applescript])
                     
-                    messagebox.showinfo(
+                        messagebox.showinfo(
                         "PDF Created & Print Dialog Opened",
                         f"PDF saved to:\n{pdf_path}\n\n"
                         f"Print dialog should now be open in Preview.",
@@ -1636,8 +1767,8 @@ class PalletHistoryWindow:
                         "PDF Created",
                         f"PDF saved to:\n{pdf_path}\n\n"
                         f"Opened in Preview. Use Cmd+P to print.",
-                        parent=self.window
-                    )
+                            parent=self.window
+                        )
             else:  # Linux
                 # Linux: Use lp command to send to printer with dialog
                 try:
@@ -1723,7 +1854,7 @@ class PalletHistoryWindow:
         """Handle customer filter change"""
         # Only load if tree widget exists (avoid error during initialization)
         if hasattr(self, 'tree') and self.tree:
-            self.load_history()
+        self.load_history()
     
     def _on_search_changed(self, *args):
         """Handle barcode search change (debounced)"""

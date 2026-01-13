@@ -184,6 +184,7 @@ a = Analysis(
         'app.pallet_history_window',
         'app.serial_database',
         'app.version',
+        'app.debug_logger',
         # Standard library modules that PyInstaller might miss
         'secrets',
         'hashlib',
