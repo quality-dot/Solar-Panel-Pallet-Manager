@@ -12,7 +12,8 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 block_cipher = None
 
 # Get absolute paths for data files (more reliable on Windows)
-project_root = Path(__file__).parent
+# Note: __file__ isn't available in spec file context, use SPECPATH instead
+project_root = Path(SPECPATH)
 excel_dir = project_root / 'EXCEL'
 icon_ico = project_root / 'icons' / 'PalletManager.ico'
 icon_icns = project_root / 'icons' / 'PalletManager.icns'
@@ -21,7 +22,7 @@ icon_icns = project_root / 'icons' / 'PalletManager.icns'
 print("\n" + "=" * 70)
 print("CHECKING FOR REFERENCE WORKBOOK")
 print("=" * 70)
-print(f"Spec file location: {Path(__file__)}")
+print(f"Spec file location: {SPECPATH}")
 print(f"Project root: {project_root}")
 print(f"EXCEL directory: {excel_dir}")
 print(f"EXCEL exists: {excel_dir.exists()}")
