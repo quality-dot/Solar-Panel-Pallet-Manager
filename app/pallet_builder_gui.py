@@ -75,6 +75,37 @@ class PalletBuilderGUI:
         version = get_version()
         self.root.title(f"Pallet Manager - {version}")
         
+        # Set window icon (for taskbar/titlebar)
+        try:
+            from app.path_utils import get_base_dir
+            import sys
+            
+            # Try to find icon file
+            if getattr(sys, 'frozen', False):
+                # Running as exe - icon is bundled
+                if hasattr(sys, '_MEIPASS'):
+                    # PyInstaller onefile
+                    icon_path = Path(sys._MEIPASS) / 'icons' / 'PalletManager.ico'
+                else:
+                    # PyInstaller onedir
+                    icon_path = Path(sys.executable).parent / 'icons' / 'PalletManager.ico'
+            else:
+                # Running from source
+                icon_path = get_base_dir() / 'icons' / 'PalletManager.ico'
+            
+            if icon_path.exists():
+                self.root.iconbitmap(str(icon_path))
+            else:
+                # Try PNG fallback
+                png_path = icon_path.with_suffix('.png')
+                if png_path.exists():
+                    from PIL import Image, ImageTk
+                    img = Image.open(png_path)
+                    photo = ImageTk.PhotoImage(img)
+                    self.root.iconphoto(True, photo)
+        except Exception as e:
+            print(f"Could not set window icon: {e}")
+        
         # macOS-specific settings
         if platform.system() == 'Darwin':
             try:
@@ -149,6 +180,10 @@ class PalletBuilderGUI:
         self.active_customer_label: Optional[tk.Label] = None
         self.active_customer_var: Optional[tk.StringVar] = None
         self.active_customer_menu: Optional[tk.OptionMenu] = None
+
+        # Window references for singleton behavior
+        self.history_window: Optional[tk.Toplevel] = None
+        self.customer_window: Optional[tk.Toplevel] = None
         
         # Always show splash screen for professional startup experience
         project_root = get_base_dir()
@@ -2929,14 +2964,29 @@ class PalletBuilderGUI:
             pass
     
     def show_settings(self):
-        """Show customer management window"""
-        dialog = tk.Toplevel(self.root)
+        """Show customer management window (singleton behavior)"""
+        # Check if customer management window already exists
+        if self.customer_window and self.customer_window.winfo_exists():
+            # Window exists, bring it to front
+            self.customer_window.lift()
+            self.customer_window.focus_force()
+            return
+
+        self.customer_window = dialog = tk.Toplevel(self.root)
         from app.version import get_version
         version = get_version()
         dialog.title(f"Customer Management - {version}")
         # Don't make it transient - let it be a separate window
         # dialog.transient(self.root)
         dialog.resizable(1, 1)  # Use 1 instead of True for Tk compatibility
+        
+        # Set window icon
+        try:
+            parent_icon = self.root.iconbitmap()
+            if parent_icon:
+                dialog.iconbitmap(parent_icon)
+        except:
+            pass
         
         # Detect dark mode and set appropriate colors
         is_dark = is_dark_mode()
@@ -3301,16 +3351,26 @@ class PalletBuilderGUI:
                  bg="#607D8B", fg="white", font=("Arial", 11, "bold"),
                  relief=tk.RAISED, bd=3,
                  activebackground="#455A64", activeforeground="white", cursor="hand2").pack(pady=(5, 0))
+
+        # Bind window destruction to clear reference
+        dialog.protocol("WM_DELETE_WINDOW", self._on_customer_window_close)
     
     def show_history(self):
-        """Show pallet history window"""
+        """Show pallet history window (singleton behavior)"""
         try:
             if not self.pallet_manager:
-                messagebox.showerror("Error", "PalletManager not initialized", 
+                messagebox.showerror("Error", "PalletManager not initialized",
                                    parent=self.root)
                 return
-            
-            # Create window immediately (window creation is fast)
+
+            # Check if history window already exists
+            if self.history_window and self.history_window.winfo_exists():
+                # Window exists, bring it to front
+                self.history_window.lift()
+                self.history_window.focus_force()
+                return
+
+            # Create new window
             self._create_history_window()
         except Exception as e:
             # Log error but keep app running
@@ -3331,7 +3391,9 @@ class PalletBuilderGUI:
     def _create_history_window(self):
         """Create history window (called asynchronously)"""
         try:
-            history_window = PalletHistoryWindow(self.root, self.pallet_manager, self.customer_manager)
+            self.history_window = PalletHistoryWindow(self.root, self.pallet_manager, self.customer_manager)
+            # Bind window destruction to clear reference
+            self.history_window.protocol("WM_DELETE_WINDOW", self._on_history_window_close)
             # Window will handle its own lifecycle
         except Exception as e:
             print(f"ERROR in _create_history_window: {e}")
@@ -3346,7 +3408,15 @@ class PalletBuilderGUI:
                 )
             except Exception:
                 print(f"CRITICAL: Could not show error dialog: {e}")
-    
+
+    def _on_history_window_close(self):
+        """Handle history window destruction to clear reference"""
+        self.history_window = None
+
+    def _on_customer_window_close(self):
+        """Handle customer window destruction to clear reference"""
+        self.customer_window = None
+
     def _load_data_async(self):
         """Load data asynchronously after UI is shown (for faster startup)"""
         try:
