@@ -1182,78 +1182,117 @@ class PalletHistoryWindow:
         c.save()
     
     def _print_pdf(self, pdf_path: Path):
-        """Print PDF file - opens PDF and optionally launches print dialog"""
+        """Print PDF file - automatically opens print dialog for the saved PDF"""
         try:
             system = platform.system()
             if system == 'Windows':
-                # Windows: Open PDF in default viewer
-                # Show success message with options
-                result = messagebox.askyesno(
-                    "PDF Created Successfully",
-                    f"PDF saved to:\n{pdf_path}\n\n"
-                    f"Click YES to open PDF for printing\n"
-                    f"Click NO to keep PDF closed",
-                    parent=self.window
-                )
-                
-                if result:
-                    # User wants to open the PDF
-                    try:
-                        # Just open the PDF - user can print with Ctrl+P
-                        os.startfile(str(pdf_path.absolute()))
-                    except Exception as e:
-                        # Fallback
-                        subprocess.run(['start', '', str(pdf_path.absolute())], 
-                                     shell=True, check=False)
-                else:
-                    # User chose not to open - just show location
+                # Windows: Use os.startfile with 'print' operation
+                # This is the most reliable way to open print dialog on Windows
+                try:
+                    # Method 1: os.startfile with 'print' operation
+                    # This tells Windows to open the file with the "print" verb
+                    # which should open the print dialog
+                    os.startfile(str(pdf_path.absolute()), 'print')
+                    
+                    # Show confirmation
                     messagebox.showinfo(
-                        "PDF Saved",
+                        "PDF Created & Print Dialog Opening",
                         f"PDF saved to:\n{pdf_path}\n\n"
-                        f"You can open it later to print.",
+                        f"Print dialog is opening...\n"
+                        f"Complete the print settings and click Print.\n\n"
+                        f"(The PDF is saved for your records)",
                         parent=self.window
                     )
+                except Exception as e:
+                    # Fallback: Try PowerShell method
+                    try:
+                        # Use PowerShell Start-Process with -Verb Print
+                        ps_command = f'Start-Process -FilePath "{pdf_path.absolute()}" -Verb Print'
+                        subprocess.Popen(
+                            ['powershell', '-NoProfile', '-Command', ps_command],
+                            shell=False,
+                            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
+                        )
+                        messagebox.showinfo(
+                            "PDF Created & Print Dialog Opening",
+                            f"PDF saved to:\n{pdf_path}\n\n"
+                            f"Print dialog is opening...",
+                            parent=self.window
+                        )
+                    except Exception:
+                        # Last resort: Just open the PDF normally
+                        try:
+                            os.startfile(str(pdf_path.absolute()))
+                            messagebox.showinfo(
+                                "PDF Created",
+                                f"PDF saved to:\n{pdf_path}\n\n"
+                                f"PDF opened. Use Ctrl+P to print.\n\n"
+                                f"(Could not automatically open print dialog)",
+                                parent=self.window
+                            )
+                        except Exception:
+                            messagebox.showwarning(
+                                "PDF Created",
+                                f"PDF saved to:\n{pdf_path}\n\n"
+                                f"Please open the PDF manually to print.",
+                                parent=self.window
+                            )
             elif system == 'Darwin':  # macOS
-                # macOS: Show success and option to open in Preview
-                result = messagebox.askyesno(
-                    "PDF Created Successfully",
-                    f"PDF saved to:\n{pdf_path}\n\n"
-                    f"Click YES to open PDF in Preview for printing\n"
-                    f"Click NO to keep PDF closed",
-                    parent=self.window
-                )
-                
-                if result:
-                    # User wants to open the PDF
-                    subprocess.run(['open', '-a', 'Preview', str(pdf_path.absolute())], 
-                                 check=False)
-                else:
-                    # User chose not to open - just show location
+                # macOS: Open PDF and trigger print dialog with AppleScript
+                try:
+                    # Open in Preview
+                    subprocess.Popen(['open', '-a', 'Preview', str(pdf_path.absolute())])
+                    
+                    # Wait for Preview to open, then trigger print dialog
+                    import time
+                    time.sleep(0.5)
+                    
+                    applescript = f'''
+                    tell application "Preview"
+                        activate
+                        delay 0.3
+                    end tell
+                    tell application "System Events"
+                        tell process "Preview"
+                            keystroke "p" using command down
+                        end tell
+                    end tell
+                    '''
+                    subprocess.Popen(['osascript', '-e', applescript])
+                    
                     messagebox.showinfo(
-                        "PDF Saved",
+                        "PDF Created & Print Dialog Opened",
                         f"PDF saved to:\n{pdf_path}\n\n"
-                        f"You can open it later to print.",
+                        f"Print dialog should now be open in Preview.",
+                        parent=self.window
+                    )
+                except Exception as e:
+                    # Fallback: Just open in Preview
+                    subprocess.run(['open', '-a', 'Preview', str(pdf_path.absolute())], check=False)
+                    messagebox.showinfo(
+                        "PDF Created",
+                        f"PDF saved to:\n{pdf_path}\n\n"
+                        f"Opened in Preview. Use Cmd+P to print.",
                         parent=self.window
                     )
             else:  # Linux
-                # Linux: Show success and option to open
-                result = messagebox.askyesno(
-                    "PDF Created Successfully",
-                    f"PDF saved to:\n{pdf_path}\n\n"
-                    f"Click YES to open PDF for printing\n"
-                    f"Click NO to keep PDF closed",
-                    parent=self.window
-                )
-                
-                if result:
-                    # User wants to open the PDF
-                    subprocess.run(['xdg-open', str(pdf_path.absolute())], check=False)
-                else:
-                    # User chose not to open - just show location
+                # Linux: Use lp command to send to printer with dialog
+                try:
+                    # Try to use lpr which shows print dialog on some systems
+                    subprocess.Popen(['lpr', str(pdf_path.absolute())])
                     messagebox.showinfo(
-                        "PDF Saved",
+                        "PDF Created & Sent to Printer",
                         f"PDF saved to:\n{pdf_path}\n\n"
-                        f"You can open it later to print.",
+                        f"Sent to default printer.",
+                        parent=self.window
+                    )
+                except Exception:
+                    # Fallback: Open with default viewer
+                    subprocess.run(['xdg-open', str(pdf_path.absolute())], check=False)
+                    messagebox.showinfo(
+                        "PDF Created",
+                        f"PDF saved to:\n{pdf_path}\n\n"
+                        f"Opened in default viewer. Use Ctrl+P to print.",
                         parent=self.window
                     )
         except Exception as e:
