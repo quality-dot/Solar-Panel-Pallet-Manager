@@ -1388,7 +1388,7 @@ class PalletBuilderGUI:
                 pallet_number_str = pallet_number_var.get().strip()
                 
                 # Validate panel type
-                if not selected_value or selected_value not in ["200WT", "220WT", "330WT", "450WT", "450BT"]:
+                if not selected_value or selected_value not in ["200WT", "220WT", "220M6", "330WT", "450WT", "450BT"]:
                     messagebox.showerror("Invalid Selection", 
                                        f"Invalid panel type: {selected_value}\n\n"
                                        "Please select a valid panel type.",
