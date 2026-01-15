@@ -58,7 +58,7 @@ def normalize_serial(serial) -> str:
         except (ValueError, OverflowError):
             pass  # Not a numeric value, keep as is
     
-    return serial_str.strip()  # Final strip in case removal left trailing spaces
+    return serial_str.strip().upper()  # Convert to uppercase for case-insensitive comparison
 
 
 class SerialDatabase:

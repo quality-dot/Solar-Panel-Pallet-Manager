@@ -172,19 +172,22 @@ class PalletManager:
     def add_serial(self, pallet: Dict[str, Any], serial: str, max_panels: int = 25) -> bool:
         """
         Add a serial number to a pallet.
-        
+
         Args:
             pallet: Pallet dict to add serial to
             serial: Serial number string to add
             max_panels: Maximum number of panels per pallet (default 25, can be 26)
-            
+
         Returns:
             True if pallet is now full (max_panels serials), False otherwise
         """
         if len(pallet["serial_numbers"]) >= max_panels:
             return True  # Already full
-        
-        pallet["serial_numbers"].append(serial)
+
+        # Normalize serial (convert to uppercase for case-insensitive storage)
+        from app.serial_database import normalize_serial
+        normalized_serial = normalize_serial(serial)
+        pallet["serial_numbers"].append(normalized_serial)
         return len(pallet["serial_numbers"]) == max_panels
     
     def remove_serial(self, pallet: Dict[str, Any], slot_index: int) -> bool:
@@ -207,17 +210,21 @@ class PalletManager:
     def is_serial_on_any_pallet(self, serial: str, current_pallet: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         """
         Check if a serial number has been used on any pallet (current or completed).
-        
+
         Args:
             serial: Serial number to check
             current_pallet: Optional current pallet dict to check (not yet in history)
-            
+
         Returns:
             Dict with pallet info if found, None otherwise
             Format: {'pallet_number': int, 'completed_at': str or None, 'is_current': bool}
         """
+        # Normalize serial for case-insensitive comparison
+        from app.serial_database import normalize_serial
+        normalized_serial = normalize_serial(serial)
+
         # Check current pallet first (if provided and not yet in history)
-        if current_pallet and serial in current_pallet.get('serial_numbers', []):
+        if current_pallet and normalized_serial in current_pallet.get('serial_numbers', []):
             return {
                 'pallet_number': current_pallet.get('pallet_number'),
                 'completed_at': None,
@@ -228,7 +235,7 @@ class PalletManager:
         for pallet in self.data.get("pallets", []):
             if pallet.get("reset", False):
                 continue  # Skip reset pallets - their serials can be reused
-            if serial in pallet.get("serial_numbers", []):
+            if normalized_serial in pallet.get("serial_numbers", []):
                 return {
                     'pallet_number': pallet.get("pallet_number"),
                     'completed_at': pallet.get("completed_at"),

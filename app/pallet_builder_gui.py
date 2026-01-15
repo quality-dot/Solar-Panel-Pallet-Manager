@@ -1575,7 +1575,11 @@ class PalletBuilderGUI:
                 return
             
             serial = self.scan_entry.get().strip()
-            
+
+            # Normalize serial early (convert to uppercase for case-insensitive processing)
+            from app.serial_database import normalize_serial
+            serial = normalize_serial(serial)
+
             # Input validation: check length and dangerous characters
             if not serial:
                 return
