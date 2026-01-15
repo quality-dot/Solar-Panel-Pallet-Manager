@@ -1798,6 +1798,15 @@ class PalletBuilderGUI:
     
     def _update_slot_display_impl(self):
         """Internal implementation of slot display update (actual work happens here)"""
+        # Preserve scroll position before clearing widgets
+        scroll_position = None
+        if self.slots_canvas:
+            try:
+                # Get current scroll position (yview returns tuple like (0.0, 1.0))
+                scroll_position = self.slots_canvas.yview()
+            except Exception:
+                pass  # If we can't get scroll position, continue without preserving it
+
         # Clear existing slot widgets completely
         for widget in self.slot_widgets:
             try:
@@ -1805,7 +1814,7 @@ class PalletBuilderGUI:
             except Exception:
                 pass  # Widget may already be destroyed
         self.slot_widgets = []
-        
+
         # Clear the scrollable frame completely
         if self.slots_scrollable:
             for widget in self.slots_scrollable.winfo_children():
@@ -1863,7 +1872,17 @@ class PalletBuilderGUI:
             def update_scroll():
                 try:
                     self.slots_canvas.configure(scrollregion=self.slots_canvas.bbox("all"))
-                    self.slots_canvas.yview_moveto(0)
+                    # Restore scroll position if we saved it, otherwise scroll to top
+                    if scroll_position is not None:
+                        try:
+                            # Try to restore the previous scroll position
+                            self.slots_canvas.yview_moveto(scroll_position[0])
+                        except Exception:
+                            # If restoring fails, scroll to top as fallback
+                            self.slots_canvas.yview_moveto(0)
+                    else:
+                        # No saved position, scroll to top
+                        self.slots_canvas.yview_moveto(0)
                 except Exception:
                     pass  # Ignore errors during scroll update
             # Use after_idle to update scroll region without blocking
