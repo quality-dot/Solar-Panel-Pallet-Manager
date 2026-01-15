@@ -1943,27 +1943,29 @@ class PalletBuilderGUI:
             
             self.slot_widgets.append(slot_frame)
         
-        # Update canvas scroll region and ensure scrolling works (deferred for performance)
+        # Update canvas scroll region and restore scroll position immediately
         if self.slots_canvas:
-            # Defer scroll region update to avoid blocking
-            def update_scroll():
-                try:
-                    self.slots_canvas.configure(scrollregion=self.slots_canvas.bbox("all"))
-                    # Restore scroll position if we saved it, otherwise scroll to top
-                    if scroll_position is not None:
-                        try:
-                            # Try to restore the previous scroll position
-                            self.slots_canvas.yview_moveto(scroll_position[0])
-                        except Exception:
-                            # If restoring fails, scroll to top as fallback
-                            self.slots_canvas.yview_moveto(0)
-                    else:
-                        # No saved position, scroll to top
+            try:
+                # Update scroll region first
+                self.slots_canvas.configure(scrollregion=self.slots_canvas.bbox("all"))
+
+                # Restore scroll position if we saved it, otherwise scroll to top
+                if scroll_position is not None:
+                    try:
+                        # Try to restore the previous scroll position
+                        self.slots_canvas.yview_moveto(scroll_position[0])
+                    except Exception:
+                        # If restoring fails, scroll to top as fallback
                         self.slots_canvas.yview_moveto(0)
+                else:
+                    # No saved position, scroll to top
+                    self.slots_canvas.yview_moveto(0)
+            except Exception:
+                # Ignore errors during scroll update - scroll to top as final fallback
+                try:
+                    self.slots_canvas.yview_moveto(0)
                 except Exception:
-                    pass  # Ignore errors during scroll update
-            # Use after_idle to update scroll region without blocking
-            self.root.after_idle(update_scroll)
+                    pass  # Ignore all scroll errors
         
         # Update slot count status and export button state
         if self.status_label:
