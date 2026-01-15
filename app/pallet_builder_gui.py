@@ -1289,6 +1289,79 @@ class PalletBuilderGUI:
                     if self.status_label:
                         self.status_label.config(text=f"Slots: {count}/{self.max_panels}", fg="black")
     
+    def _show_modal_error_dialog(self, title: str, message: str, error_type: str = "error"):
+        """
+        Show a modal error dialog that requires explicit dismissal.
+        Prevents accidental dismissal during barcode scanning.
+        """
+        # Create modal dialog
+        dialog = tk.Toplevel(self.root)
+        dialog.title(title)
+        dialog.transient(self.root)
+        dialog.grab_set()  # Make modal
+        dialog.resizable(False, False)
+
+        # Set appropriate icon based on error type
+        if error_type == "warning":
+            icon_text = "⚠️"
+        else:
+            icon_text = "❌"
+
+        # Center the dialog
+        dialog.geometry("400x200")
+        dialog.geometry("+{}+{}".format(
+            self.root.winfo_rootx() + 50,
+            self.root.winfo_rooty() + 50
+        ))
+
+        # Create content
+        main_frame = tk.Frame(dialog, padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Icon and title
+        title_frame = tk.Frame(main_frame)
+        title_frame.pack(fill=tk.X, pady=(0, 10))
+
+        icon_label = tk.Label(title_frame, text=icon_text, font=("Arial", 24))
+        icon_label.pack(side=tk.LEFT, padx=(0, 10))
+
+        title_label = tk.Label(title_frame, text=title, font=("Arial", 12, "bold"))
+        title_label.pack(side=tk.LEFT)
+
+        # Message
+        message_label = tk.Label(main_frame, text=message, wraplength=350, justify=tk.LEFT)
+        message_label.pack(fill=tk.X, pady=(0, 20))
+
+        # Button frame
+        button_frame = tk.Frame(main_frame)
+        button_frame.pack(fill=tk.X)
+
+        # OK button
+        ok_button = tk.Button(
+            button_frame,
+            text="OK",
+            command=dialog.destroy,
+            width=10,
+            bg="#0078d4",
+            fg="white",
+            font=("Arial", 10, "bold")
+        )
+        ok_button.pack(side=tk.RIGHT)
+        ok_button.focus_set()  # Focus on OK button
+
+        # Bind Enter key to dismiss dialog
+        def on_enter(event):
+            dialog.destroy()
+
+        dialog.bind('<Return>', on_enter)
+        dialog.bind('<KP_Enter>', on_enter)  # Numpad Enter
+
+        # Prevent other windows from being clicked
+        dialog.focus_force()
+
+        # Wait for dialog to close
+        self.root.wait_window(dialog)
+
     def _select_panel_type_dialog(self, suggested_pallet_number: Optional[int] = None) -> Optional[tuple]:
         """
         Show dialog to select panel type, pallet number, and customer.
@@ -1641,11 +1714,11 @@ class PalletBuilderGUI:
             
             # Check for duplicate on current pallet
             if self.current_pallet and serial in self.current_pallet.get('serial_numbers', []):
-                messagebox.showwarning(
+                self._show_modal_error_dialog(
                     "Duplicate Barcode",
                     f"Serial number '{serial}' is already on this pallet.\n\n"
                     "Please scan a different barcode.",
-                    parent=self.root
+                    error_type="warning"
                 )
                 self.scan_entry.delete(0, tk.END)
                 self.scan_entry.focus()
@@ -1689,10 +1762,10 @@ class PalletBuilderGUI:
                             f"Pallet #{pallet_num}\n\n"
                             "Please scan a different barcode."
                         )
-                    messagebox.showwarning(
+                    self._show_modal_error_dialog(
                         "Duplicate Barcode",
                         message,
-                        parent=self.root
+                        error_type="warning"
                     )
                     self.scan_entry.delete(0, tk.END)
                     self.scan_entry.focus()
