@@ -3426,11 +3426,15 @@ class PalletBuilderGUI:
                 print(f"CRITICAL: Could not show error dialog: {e}")
 
     def _on_history_window_close(self):
-        """Handle history window destruction to clear reference"""
+        """Handle history window destruction to clear reference and destroy window"""
+        if self.history_window and self.history_window.window:
+            self.history_window.window.destroy()
         self.history_window = None
 
     def _on_customer_window_close(self):
-        """Handle customer window destruction to clear reference"""
+        """Handle customer window destruction to clear reference and destroy window"""
+        if self.customer_window:
+            self.customer_window.destroy()
         self.customer_window = None
 
     def _load_data_async(self):
