@@ -234,7 +234,10 @@ class PalletHistoryWindow:
                  command=self.open_export_file, width=15).pack(side=tk.LEFT, padx=2)
         tk.Button(action_frame, text="Open Export Folder", 
                  command=self.open_export_folder, width=15).pack(side=tk.LEFT, padx=2)
-        tk.Button(action_frame, text="Delete Pallet", 
+        tk.Button(action_frame, text="Reset Pallet",
+                 command=self.reset_selected_pallet, width=15,
+                 bg="#ff9800", fg="black", font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=2)
+        tk.Button(action_frame, text="Delete Pallet",
                  command=self.delete_selected_pallet, width=15,
                  bg="#f44336", fg="white", font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=2)
         
@@ -463,6 +466,10 @@ class PalletHistoryWindow:
                 completed = pallet.get('completed_at', 'N/A')
                 exported_file = pallet.get('exported_file', '')
                 file_name = Path(exported_file).name if exported_file else 'N/A'
+
+                # Add reset indicator to file name
+                if pallet.get('reset', False):
+                    file_name = f"[RESET] {file_name}"
                 
                 # Initialize checkbox state (unchecked by default)
                 self.checkbox_states[pallet_num] = False
@@ -741,7 +748,14 @@ class PalletHistoryWindow:
         else:
             details += f"Customer: Not specified\n"
         
-        details += f"Status: {'Exported' if pallet.get('exported_file') else 'Not Exported'}\n"
+        # Show reset status
+        if pallet.get('reset', False):
+            details += f"Status: RESET - {pallet.get('reset_reason', 'Manual reset')}\n"
+            details += f"Reset Date: {pallet.get('reset_at', 'N/A')}\n"
+            details += f"Original Status: {'Exported' if pallet.get('exported_file') else 'Not Exported'}\n"
+        else:
+            details += f"Status: {'Exported' if pallet.get('exported_file') else 'Not Exported'}\n"
+
         details += f"Export File: {Path(pallet.get('exported_file', '')).name if pallet.get('exported_file') else 'N/A'}\n\n"
         details += "Serial Numbers:\n"
         details += "-" * 40 + "\n"
@@ -758,7 +772,83 @@ class PalletHistoryWindow:
                 details += f"{i:2d}. (empty)\n"
         
         self.details_text.insert(1.0, details)
-    
+
+    def reset_selected_pallet(self):
+        """Reset the selected pallet, allowing its panels to be rescanned"""
+        # Get selected pallets from checkboxes
+        selected_pallets = self.get_selected_pallets()
+
+        if not selected_pallets:
+            # Fall back to single selected pallet if no checkboxes selected
+            if not self.selected_pallet:
+                messagebox.showwarning("No Selection", "Please select a pallet to reset.",
+                                     parent=self.window)
+                return
+            selected_pallets = [self.selected_pallet]
+
+        # For now, only allow resetting one pallet at a time
+        if len(selected_pallets) > 1:
+            messagebox.showwarning("Multiple Selection",
+                                 "Please select only one pallet to reset at a time.",
+                                 parent=self.window)
+            return
+
+        pallet = selected_pallets[0]
+        pallet_num = pallet.get('pallet_number', 'N/A')
+        exported_file = pallet.get('exported_file', '')
+
+        # Check if pallet is already reset
+        if pallet.get('reset', False):
+            messagebox.showinfo("Already Reset",
+                               f"Pallet #{pallet_num} has already been reset.",
+                               parent=self.window)
+            return
+
+        # Confirm reset
+        confirm_msg = f"Are you sure you want to reset Pallet #{pallet_num}?\n\n"
+        confirm_msg += "This will:\n"
+        confirm_msg += "• Keep the pallet in history with a reset record\n"
+        confirm_msg += "• Allow the panels to be scanned again onto another pallet\n"
+        confirm_msg += "• Preserve the export file (if it exists)\n\n"
+        confirm_msg += "The pallet will remain visible in history but marked as reset.\n"
+        confirm_msg += "Use 'Delete Pallet' if you want to remove it completely."
+
+        if not messagebox.askyesno("Confirm Reset", confirm_msg, parent=self.window):
+            return
+
+        # Ask for reset reason
+        from tkinter import simpledialog
+        reason = simpledialog.askstring("Reset Reason",
+                                       "Enter reason for resetting this pallet:",
+                                       parent=self.window)
+        if reason is None:  # User cancelled
+            return
+        if not reason.strip():
+            reason = "Manual reset"
+
+        # Reset the pallet
+        try:
+            success = self.pallet_manager.reset_pallet(pallet_num, reason)
+            if success:
+                messagebox.showinfo("Reset Successful",
+                                  f"Pallet #{pallet_num} has been reset.\n\n"
+                                  f"The panels from this pallet can now be scanned again.\n\n"
+                                  f"Reason: {reason}",
+                                  parent=self.window)
+
+                # Clear selection and refresh history
+                self.selected_pallet = None
+                self.checkbox_states = {}
+                self.load_history()
+            else:
+                messagebox.showerror("Reset Failed",
+                                   f"Could not find Pallet #{pallet_num} in history.",
+                                   parent=self.window)
+        except Exception as e:
+            messagebox.showerror("Reset Error",
+                               f"An error occurred while resetting the pallet:\n{e}",
+                               parent=self.window)
+
     def delete_selected_pallet(self):
         """Delete the selected pallet and its export file"""
         # Get selected pallets from checkboxes

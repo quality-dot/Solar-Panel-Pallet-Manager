@@ -224,8 +224,10 @@ class PalletManager:
                 'is_current': True
             }
         
-        # Check all completed pallets in history
+        # Check all completed pallets in history (skip reset pallets)
         for pallet in self.data.get("pallets", []):
+            if pallet.get("reset", False):
+                continue  # Skip reset pallets - their serials can be reused
             if serial in pallet.get("serial_numbers", []):
                 return {
                     'pallet_number': pallet.get("pallet_number"),
@@ -286,7 +288,34 @@ class PalletManager:
             return self.save_history()
         
         return False
-    
+
+    def reset_pallet(self, pallet_number: int, reason: str = "Manual reset") -> bool:
+        """
+        Reset a pallet, marking it as reset and allowing its serials to be reused.
+        Unlike delete_pallet, this keeps the pallet in history with a reset record.
+
+        Args:
+            pallet_number: Pallet number to reset
+            reason: Reason for the reset (for audit trail)
+
+        Returns:
+            True if reset successful, False if pallet not found
+        """
+        pallets = self.data.get("pallets", [])
+
+        # Find and update the pallet
+        for pallet in pallets:
+            if pallet.get("pallet_number") == pallet_number:
+                # Mark pallet as reset
+                pallet["reset"] = True
+                pallet["reset_at"] = datetime.now().isoformat()
+                pallet["reset_reason"] = reason
+
+                # Save updated history
+                return self.save_history()
+
+        return False
+
     def get_history(self, filter_exported: Optional[bool] = None) -> List[Dict[str, Any]]:
         """
         Get pallet history, optionally filtered.
