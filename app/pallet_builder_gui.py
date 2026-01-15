@@ -1162,7 +1162,7 @@ class PalletBuilderGUI:
             if config_file.exists():
                 with open(config_file, 'r', encoding='utf-8') as f:
                     last_type = f.read().strip()
-                    if last_type in ["200WT", "220WT", "330WT", "450WT", "450BT"]:
+                    if last_type in ["200WT", "220WT", "220M6", "330WT", "450WT", "450BT"]:
                         return last_type
         except Exception:
             pass
