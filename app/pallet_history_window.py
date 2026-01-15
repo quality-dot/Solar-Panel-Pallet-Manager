@@ -200,9 +200,8 @@ class PalletHistoryWindow:
         self.tree.heading("File Name", text="File Name", command=lambda: self._sort_by_column("File Name"))
         self.tree.column("File Name", width=200)
         
-        # Bind click events for Windows File Explorer-style selection
+        # Bind click events for checkbox-based selection
         self.tree.bind("<Button-1>", self.on_tree_click)
-        self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
         
         # Configure selection tags for visual highlighting
         self.tree.tag_configure("selected", background="#0078d4", foreground="white")
@@ -488,7 +487,7 @@ class PalletHistoryWindow:
         self.window.after(10, insert_next_chunk)
     
     def on_tree_click(self, event):
-        """Handle clicks on tree - Windows File Explorer style selection"""
+        """Handle clicks on tree - checkbox-based multi-selection"""
         item = self.tree.identify_row(event.y)
         if not item:
             return
@@ -503,12 +502,9 @@ class PalletHistoryWindow:
         column = self.tree.identify_column(event.x)
         column_index = int(column.replace("#", "")) - 1  # Convert "#1" to 0, "#2" to 1, etc.
 
-        # Check if Ctrl key is pressed (for multi-select)
-        ctrl_pressed = (event.state & 0x4) != 0  # Control key mask
-
-        # Handle clicks on checkbox column (column 0) - toggle checkbox and selection
+        # Only handle checkbox column clicks (column 0)
         if column_index == 0:
-            # Toggle checkbox state
+            # Toggle checkbox state (independent of other checkboxes)
             current_state = self.checkbox_states.get(pallet_num, False)
             new_state = not current_state
             self.checkbox_states[pallet_num] = new_state
@@ -522,32 +518,12 @@ class PalletHistoryWindow:
             else:
                 self.tree.selection_remove(item)
 
-        # Handle clicks on any other column - toggle selection
-        else:
-            # Always toggle selection for this item (Ctrl not required for simplicity)
-            current_selected = self.tree.selection()
-            if item in current_selected:
-                # Remove from selection
-                self.tree.selection_remove(item)
-                self.checkbox_states[pallet_num] = False
-            else:
-                # Add to selection (allow multiple without requiring Ctrl)
-                self.tree.selection_add(item)
-                self.checkbox_states[pallet_num] = True
+            # Update select all checkbox state
+            self._update_select_all_state()
 
-        # Update checkbox display for all items to match selection
-        self._sync_checkbox_with_selection()
-
-        # Update select all checkbox state
-        self._update_select_all_state()
-
-        # Show details based on selection
-        self._update_details_for_selection()
+            # Show details based on selection
+            self._update_details_for_selection()
     
-    def on_tree_select(self, event):
-        """Handle Treeview selection change - sync checkboxes with selection"""
-        self._sync_checkbox_with_selection()
-        self._update_details_for_selection()
     
     def _select_single_item(self, item, pallet_num):
         """Select a single item and deselect all others (Windows File Explorer style)"""
