@@ -144,18 +144,18 @@ class PalletExporter:
                     # Final export path using B3 value
                     export_path = export_dir / filename
                     
-                    # Handle filename collision: if file already exists, append "_copy" or "_copy_2", etc.
+                    # Handle filename collision: if file already exists, append " (2)", " (3)", etc.
                     if export_path.exists():
                         base_name = sanitized_name if b3_value else f"Pallet_{available_number}"
-                        # First try "_copy"
-                        filename = f"{base_name}_copy.xlsx"
-                        export_path = export_dir / filename
                         counter = 2
-                        # If "_copy" also exists, try "_copy_2", "_copy_3", etc.
+                        filename = f"{base_name} ({counter}).xlsx"
+                        export_path = export_dir / filename
+
+                        # If "(2)" also exists, try "(3)", "(4)", etc.
                         while export_path.exists():
-                            filename = f"{base_name}_copy_{counter}.xlsx"
-                            export_path = export_dir / filename
                             counter += 1
+                            filename = f"{base_name} ({counter}).xlsx"
+                            export_path = export_dir / filename
                             if counter > 1000:  # Safety limit
                                 raise RuntimeError("Too many files with same name - please clean up export directory")
                     
