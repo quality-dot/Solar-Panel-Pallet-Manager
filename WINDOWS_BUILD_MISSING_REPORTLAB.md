@@ -91,3 +91,7 @@ Only **PDF export from History** won't work. Everything else functions normally!
 - ❌ PDF export requires reportlab
 - ✅ App handles missing reportlab gracefully
 
+
+
+
+

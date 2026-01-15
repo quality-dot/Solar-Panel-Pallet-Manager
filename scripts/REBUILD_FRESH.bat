@@ -15,3 +15,7 @@ echo.
 echo Step 2: Building application...
 call build_windows.bat
 
+
+
+
+

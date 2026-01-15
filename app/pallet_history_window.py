@@ -78,6 +78,12 @@ class PalletHistoryWindow:
         
         self.setup_ui()
         self.load_history()
+
+        # Bring window to front and focus it
+        self.window.lift()
+        self.window.focus_force()
+        self.window.attributes('-topmost', True)  # Keep on top briefly
+        self.window.after(100, lambda: self.window.attributes('-topmost', False))  # Remove topmost after a moment
     
     def setup_ui(self):
         """Create UI layout"""

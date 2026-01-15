@@ -151,3 +151,7 @@ Executable: Pallet Manager.exe
 
 All macOS fixes have been applied and verified for Windows compatibility. The application should now build and run successfully on Windows with all features working correctly.
 
+
+
+
+

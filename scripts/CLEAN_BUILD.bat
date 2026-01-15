@@ -54,3 +54,7 @@ echo Now run: scripts\build_windows.bat
 echo.
 pause
 
+
+
+
+

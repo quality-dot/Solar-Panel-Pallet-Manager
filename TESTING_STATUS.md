@@ -270,3 +270,7 @@ Remove or comment out the debug print statements in `app/pallet_builder_gui.py`:
 **Status:** macOS ✅ | Windows ⏳ NEEDS TESTING
 
 
+
+
+
+

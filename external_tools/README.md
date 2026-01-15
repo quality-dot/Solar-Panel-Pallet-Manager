@@ -57,3 +57,7 @@ The app will automatically fall back to:
 SumatraPDF is licensed under AGPL/GPLv3. Redistribution is permitted.
 See: https://github.com/sumatrapdfreader/sumatrapdf/blob/master/COPYING
 
+
+
+
+

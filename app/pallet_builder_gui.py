@@ -1326,7 +1326,7 @@ class PalletBuilderGUI:
         
         # Dropdown - create immediately
         panel_type_menu = tk.OptionMenu(main_frame, panel_type_var,
-                                        *["200WT", "220WT", "330WT", "450WT", "450BT"])
+                                        *["200WT", "220WT", "220M6", "330WT", "450WT", "450BT"])
         panel_type_menu.config(bg="white", fg="black", 
                               activebackground="#E0E0E0", activeforeground="black",
                               takefocus=False)
@@ -3357,6 +3357,12 @@ class PalletBuilderGUI:
                  relief=tk.RAISED, bd=3,
                  activebackground="#455A64", activeforeground="white", cursor="hand2").pack(pady=(5, 0))
 
+        # Bring window to front and focus it
+        dialog.lift()
+        dialog.focus_force()
+        dialog.attributes('-topmost', True)  # Keep on top briefly
+        dialog.after(100, lambda: dialog.attributes('-topmost', False))  # Remove topmost after a moment
+
         # Bind window destruction to clear reference
         dialog.protocol("WM_DELETE_WINDOW", self._on_customer_window_close)
     
@@ -3371,10 +3377,10 @@ class PalletBuilderGUI:
             # Check if history window already exists
             if self.history_window:
                 try:
-                    if self.history_window.winfo_exists():
+                    if self.history_window.window.winfo_exists():
                         # Window exists, bring it to front
-                        self.history_window.lift()
-                        self.history_window.focus_force()
+                        self.history_window.window.lift()
+                        self.history_window.window.focus_force()
                         return
                 except tk.TclError:
                     # Window was destroyed, clear reference
@@ -3403,7 +3409,7 @@ class PalletBuilderGUI:
         try:
             self.history_window = PalletHistoryWindow(self.root, self.pallet_manager, self.customer_manager)
             # Bind window destruction to clear reference
-            self.history_window.protocol("WM_DELETE_WINDOW", self._on_history_window_close)
+            self.history_window.window.protocol("WM_DELETE_WINDOW", self._on_history_window_close)
             # Window will handle its own lifecycle
         except Exception as e:
             print(f"ERROR in _create_history_window: {e}")
