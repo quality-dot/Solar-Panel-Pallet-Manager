@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 REM Pallet Manager - Initial Developer Setup
 REM Installs all tools needed for automatic updates and development
 
@@ -29,7 +30,9 @@ if %errorLevel% == 0 (
 ) else (
     echo ✗ ERROR: Administrator privileges required!
     echo Please right-click this script and select "Run as administrator"
-    pause
+    echo.
+    echo Press any key to exit...
+    pause >nul
     exit /b 1
 )
 
@@ -42,25 +45,30 @@ echo Step 1: Installing Chocolatey
 echo ========================================
 echo.
 
-REM Check if Chocolatey is already installed
-choco --version >nul 2>&1
-if %errorLevel% == 0 (
+REM Check if Chocolatey is already installed by looking for the directory
+if exist "%ALLUSERSPROFILE%\chocolatey\bin\choco.exe" (
     echo ✓ Chocolatey is already installed.
     goto :choco_done
 )
 
 echo Installing Chocolatey...
 
-REM Try the installation
-powershell -NoProfile -ExecutionPolicy Bypass -Command "& { [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; try { Invoke-WebRequest -Uri 'https://chocolatey.org/install.ps1' -OutFile '%TEMP%\choco-install.ps1' -UseBasicParsing } catch { Write-Host 'Failed to download Chocolatey installer'; exit 1 } }"
+REM Create temp directory if it doesn't exist
+if not exist "%TEMP%" mkdir "%TEMP%" 2>nul
+
+REM Download Chocolatey installer
+echo Downloading Chocolatey installer...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Invoke-WebRequest -Uri 'https://chocolatey.org/install.ps1' -OutFile '%TEMP%\choco-install.ps1' -UseBasicParsing; exit 0 } catch { Write-Host 'Download failed'; exit 1 }" 2>nul
 
 if errorlevel 1 (
     echo ✗ ERROR: Failed to download Chocolatey installer.
+    echo Please check your internet connection and try again.
     goto :error
 )
 
 REM Run the installer
-powershell -NoProfile -ExecutionPolicy Bypass -File "%TEMP%\choco-install.ps1"
+echo Installing Chocolatey...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { & '%TEMP%\choco-install.ps1'; exit $LASTEXITCODE } catch { Write-Host 'Installation failed'; exit 1 }" 2>nul
 
 if errorlevel 1 (
     echo ✗ ERROR: Failed to run Chocolatey installer.
@@ -70,18 +78,17 @@ if errorlevel 1 (
 REM Clean up temp file
 del "%TEMP%\choco-install.ps1" 2>nul
 
-REM Add Chocolatey to PATH
+REM Add Chocolatey to PATH for this session
 set "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 
 REM Verify Chocolatey installation
-choco --version >nul 2>&1
-if errorlevel 1 (
-    echo ✗ ERROR: Chocolatey installation failed verification.
+if exist "%ALLUSERSPROFILE%\chocolatey\bin\choco.exe" (
+    echo ✓ Chocolatey installed successfully.
+    echo.
+) else (
+    echo ✗ ERROR: Chocolatey installation verification failed.
     goto :error
 )
-
-echo ✓ Chocolatey installed successfully.
-echo.
 
 :choco_done
 
@@ -91,7 +98,7 @@ echo ========================================
 echo.
 
 REM Check if Git is already installed
-git --version >nul 2>&1
+where git >nul 2>&1
 if %errorLevel% == 0 (
     echo ✓ Git is already installed.
     goto :git_done
@@ -100,21 +107,23 @@ if %errorLevel% == 0 (
 echo Installing Git via Chocolatey...
 
 REM Install Git
-choco install git -y --params="/GitAndUnixToolsOnPath /WindowsTerminal /NoShellIntegration"
+echo Running: choco install git -y --params="/GitAndUnixToolsOnPath /WindowsTerminal /NoShellIntegration"
+choco install git -y --params="/GitAndUnixToolsOnPath /WindowsTerminal /NoShellIntegration" 2>nul
 
 if errorlevel 1 (
     echo ✗ ERROR: Failed to install Git via Chocolatey.
     echo.
-    echo Trying alternative: Download Git directly...
-    echo Please download and install Git manually from:
-    echo https://git-scm.com/download/win
+    echo MANUAL ALTERNATIVE:
+    echo 1. Download Git from: https://git-scm.com/download/win
+    echo 2. Run the installer (accept all defaults)
+    echo 3. Make sure to select "Git from the command line and also from 3rd-party software"
+    echo 4. Re-run this script after manual installation.
     echo.
-    echo Then re-run this script.
     goto :error
 )
 
 REM Verify Git installation
-git --version >nul 2>&1
+where git >nul 2>&1
 if errorlevel 1 (
     echo ✗ ERROR: Git installation failed verification.
     goto :error
@@ -131,34 +140,40 @@ echo ========================================
 echo.
 
 REM Check if Python is already installed
-python --version >nul 2>&1
+where python >nul 2>&1
 if %errorLevel% == 0 (
-    echo ✓ Python is already installed.
-    goto :python_done
+    python --version 2>nul | findstr "Python 3" >nul
+    if %errorLevel% == 0 (
+        echo ✓ Python 3.x is already installed.
+        goto :python_done
+    )
 )
 
 echo Installing Python via Chocolatey...
 
-REM Install Python
-choco install python311 -y
+REM Install Python 3.11
+echo Running: choco install python311 -y
+choco install python311 -y 2>nul
 
 if errorlevel 1 (
     echo ✗ ERROR: Failed to install Python via Chocolatey.
     echo.
-    echo Trying alternative: Download Python directly...
-    echo Please download and install Python manually from:
-    echo https://python.org/downloads/
-    echo Make sure to check "Add Python to PATH" during installation.
+    echo MANUAL ALTERNATIVE:
+    echo 1. Download Python from: https://python.org/downloads/
+    echo 2. Run the installer
+    echo 3. IMPORTANT: Check "Add Python to PATH" during installation
+    echo 4. Re-run this script after manual installation.
     echo.
-    echo Then re-run this script.
     goto :error
 )
 
 REM Add Python to PATH for current session
-set "PATH=%PATH%;C:\Python311;C:\Python311\Scripts"
+if exist "C:\Python311" (
+    set "PATH=%PATH%;C:\Python311;C:\Python311\Scripts"
+)
 
 REM Verify Python installation
-python --version >nul 2>&1
+python --version 2>nul | findstr "Python 3" >nul
 if errorlevel 1 (
     echo ✗ ERROR: Python installation failed verification.
     goto :error
@@ -185,48 +200,59 @@ echo.
 set "verification_errors=0"
 
 echo Checking Chocolatey...
-choco --version >nul 2>&1
-if errorlevel 1 (
+if exist "%ALLUSERSPROFILE%\chocolatey\bin\choco.exe" (
+    echo ✓ Chocolatey: OK
+) else (
     echo ✗ Chocolatey: NOT FOUND
     set /a "verification_errors+=1"
-) else (
-    echo ✓ Chocolatey: OK
 )
 
 echo Checking Git...
-git --version >nul 2>&1
-if errorlevel 1 (
+where git >nul 2>&1
+if %errorLevel% == 0 (
+    echo ✓ Git: OK
+) else (
     echo ✗ Git: NOT FOUND
     set /a "verification_errors+=1"
-) else (
-    echo ✓ Git: OK
 )
 
 echo Checking Python...
-python --version >nul 2>&1
-if errorlevel 1 (
+where python >nul 2>&1
+if %errorLevel% == 0 (
+    python --version 2>nul | findstr "Python 3" >nul
+    if %errorLevel% == 0 (
+        echo ✓ Python: OK
+    ) else (
+        echo ✗ Python: Version 3.x required
+        set /a "verification_errors+=1"
+    )
+) else (
     echo ✗ Python: NOT FOUND
     set /a "verification_errors+=1"
-) else (
-    echo ✓ Python: OK
 )
 
 echo Checking Pip...
-python -m pip --version >nul 2>&1
-if errorlevel 1 (
-    echo ✗ Pip: NOT FOUND
-    set /a "verification_errors+=1"
-) else (
-    echo ✓ Pip: OK
+if %verification_errors% == 0 (
+    python -m pip --version >nul 2>&1
+    if %errorLevel% == 0 (
+        echo ✓ Pip: OK
+    ) else (
+        echo ✗ Pip: NOT FOUND
+        set /a "verification_errors+=1"
+    )
 )
 
 echo.
 if %verification_errors% gtr 0 (
-    echo ⚠️  Some tools failed verification.
-    echo Please restart Command Prompt and try again.
-    echo If issues persist, install manually:
-    echo - Git: https://git-scm.com/download/win
-    echo - Python: https://python.org/downloads/
+    echo ⚠️  Some tools failed verification (%verification_errors% errors).
+    echo.
+    echo TROUBLESHOOTING:
+    echo 1. Close and reopen Command Prompt as Administrator
+    echo 2. Run this script again
+    echo 3. If issues persist, install manually:
+    echo   - Git: https://git-scm.com/download/win
+    echo   - Python: https://python.org/downloads/
+    echo.
     goto :error
 ) else (
     echo ✓ All tools verified successfully!
@@ -239,38 +265,53 @@ echo ========================================
 echo.
 echo All developer tools have been installed successfully!
 echo.
-echo Next steps:
-echo 1. Close and reopen Command Prompt/PowerShell
-echo 2. Run 'scripts\update_from_github.bat' to get latest updates
-echo 3. Or run 'scripts\install_all_windows.bat' to rebuild
+echo NEXT STEPS:
+echo ──────────────────────────────────────
+echo 1. Close this Command Prompt window
+echo 2. Open a NEW Command Prompt as Administrator
+echo 3. Navigate to your project folder
+echo 4. Run: scripts\update_from_github.bat
 echo.
 echo Your development environment is now ready! 🚀
 echo.
-pause
+echo Press any key to exit...
+pause >nul
 goto :eof
 
 :error
 echo.
 echo ========================================
-echo ❌ Setup Failed!
+echo ❌ Setup Incomplete
 echo ========================================
 echo.
-echo One or more installations failed.
-echo Please check the error messages above and try again.
+echo Some installations failed or need manual completion.
 echo.
-echo Manual installation options:
-echo - Chocolatey: https://chocolatey.org/install
-echo - Git: https://git-scm.com/download/win
-echo - Python: https://python.org/downloads/
+echo OPTIONS:
+echo ──────────────────────────────────────
+echo 1. Try running this script again as Administrator
+echo 2. Install manually using the links below
+echo 3. Check your internet connection
+echo.
+echo MANUAL INSTALLATION LINKS:
+echo ──────────────────────────────────────
+echo Chocolatey: https://chocolatey.org/install
+echo Git:        https://git-scm.com/download/win
+echo Python:     https://python.org/downloads/
 echo.
 echo After manual installation, re-run this script.
 echo.
-pause
+echo Press any key to exit...
+pause >nul
 exit /b 1
 
 :cancel
 echo.
-echo Setup cancelled by user.
-echo No tools were installed.
+echo ========================================
+echo Setup Cancelled
+echo ========================================
 echo.
-pause
+echo No tools were installed.
+echo You can run this script again anytime.
+echo.
+echo Press any key to exit...
+pause >nul
