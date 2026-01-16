@@ -244,29 +244,32 @@ class PalletManager:
         
         return None
     
-    def complete_pallet(self, pallet: Dict[str, Any], exported_file: Path) -> bool:
+    def complete_pallet(self, pallet: Dict[str, Any], exported_file: Path, export_datetime: Optional[datetime] = None) -> bool:
         """
         Mark a pallet as complete and save to history.
 
         Args:
             pallet: Pallet dict to complete
             exported_file: Path to exported Excel file
+            export_datetime: Optional datetime to use for completion timestamp (for consistency)
 
         Returns:
             True if save successful, False otherwise
         """
-        # Set completion timestamp
-        pallet["completed_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
+        # Set completion timestamp - use provided export_datetime for consistency, or current time
+        completed_datetime = export_datetime if export_datetime else datetime.now()
+        pallet["completed_at"] = completed_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        print(f"DEBUG: complete_pallet setting completed_at = {pallet['completed_at']} (datetime: {completed_datetime.isoformat()})")
+
         # Store exported file path (relative to project root)
         pallet["exported_file"] = str(exported_file)
-        
+
         # Add to history
         self.data["pallets"].append(pallet)
-        
+
         # Increment next pallet number
         self.data["next_pallet_number"] = pallet["pallet_number"] + 1
-        
+
         # Save to file
         return self.save_history()
     

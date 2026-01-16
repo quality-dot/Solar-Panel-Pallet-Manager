@@ -2242,12 +2242,14 @@ class PalletBuilderGUI:
             
             try:
                 # Export pallet to Excel file (pass selected panel type, customer, and progress callback)
-                export_path = self.pallet_exporter.export_pallet(
-                    self.current_pallet, 
+                export_result = self.pallet_exporter.export_pallet(
+                    self.current_pallet,
                     panel_type,
                     customer=customer,
                     progress_callback=lambda stage, percent: self._update_progress(progress_window, stage, percent)
                 )
+                # Unpack export path and datetime
+                export_path, export_datetime = export_result
             finally:
                 # Always close progress window
                 try:
@@ -2263,8 +2265,8 @@ class PalletBuilderGUI:
                     'display_name': customer_display_name
                 }
             
-            # Save to history
-            success = self.pallet_manager.complete_pallet(self.current_pallet, export_path)
+            # Save to history - pass export_datetime for consistency
+            success = self.pallet_manager.complete_pallet(self.current_pallet, export_path, export_datetime)
             
             if not success:
                 messagebox.showerror(
@@ -2620,8 +2622,9 @@ class PalletBuilderGUI:
                         return
                     
                     try:
-                        export_path = self.pallet_exporter.export_pallet(self.current_pallet, panel_type, customer=customer)
-                        
+                        export_result = self.pallet_exporter.export_pallet(self.current_pallet, panel_type, customer=customer)
+                        export_path, export_datetime = export_result
+
                         # Store customer information in pallet before saving to history
                         if customer:
                             self.current_pallet['customer'] = {
@@ -2629,8 +2632,8 @@ class PalletBuilderGUI:
                                 'business': customer['business'],
                                 'display_name': customer_display_name
                             }
-                        
-                        success = self.pallet_manager.complete_pallet(self.current_pallet, export_path)
+
+                        success = self.pallet_manager.complete_pallet(self.current_pallet, export_path, export_datetime)
                         if success:
                             messagebox.showinfo(
                                 "Pallet Exported",
