@@ -65,8 +65,6 @@ class PalletExporter:
         # Capture export date once to ensure consistency across all date operations
         # This prevents date mismatches when export crosses midnight
         export_datetime = datetime.now()
-        print(f"DEBUG: export_pallet started at {export_datetime} (ISO: {export_datetime.isoformat()})")
-        print(f"DEBUG: pallet completed_at before export: {pallet.get('completed_at', 'NOT SET')}")
 
         # Progress: 0-10% - Setup
         if progress_callback:
@@ -535,7 +533,6 @@ class PalletExporter:
                 date_mdyyyy = current_date.strftime("%#m%#d%Y")  # Windows: removes leading zeros from month and day
             # Combine: PanelType + MDYYYY + "-" + PalletNumber
             b3_value = f"{panel_type}{date_mdyyyy}-{pallet_number}"
-            print(f"DEBUG: Cell B3: current_date={current_date}, date_mdyyyy={date_mdyyyy}, b3_value={b3_value}")
             # Update Cell B3 - handle merged cells (optimized)
             try:
                 cell_b3 = sheet.cell(row=3, column=2)

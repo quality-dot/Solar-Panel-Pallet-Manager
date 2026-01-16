@@ -259,7 +259,6 @@ class PalletManager:
         # Set completion timestamp - use provided export_datetime for consistency, or current time
         completed_datetime = export_datetime if export_datetime else datetime.now()
         pallet["completed_at"] = completed_datetime.strftime("%Y-%m-%d %H:%M:%S")
-        print(f"DEBUG: complete_pallet setting completed_at = {pallet['completed_at']} (datetime: {completed_datetime.isoformat()})")
 
         # Store exported file path (relative to project root)
         pallet["exported_file"] = str(exported_file)
