@@ -247,11 +247,11 @@ class PalletManager:
     def complete_pallet(self, pallet: Dict[str, Any], exported_file: Path) -> bool:
         """
         Mark a pallet as complete and save to history.
-        
+
         Args:
             pallet: Pallet dict to complete
             exported_file: Path to exported Excel file
-            
+
         Returns:
             True if save successful, False otherwise
         """

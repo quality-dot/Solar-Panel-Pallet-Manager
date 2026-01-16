@@ -33,12 +33,12 @@ class PalletExporter:
         self.base_export_dir = export_dir
         self.serial_db = serial_db
     
-    def export_pallet(self, pallet: Dict, panel_type: Optional[str] = None, 
+    def export_pallet(self, pallet: Dict, panel_type: Optional[str] = None,
                      customer: Optional[Dict] = None,
                      progress_callback: Optional[callable] = None) -> Path:
         """
         Export a pallet to a standalone Excel file.
-        
+
         Copies the entire reference workbook and renames it to the pallet number.
         Updates the PALLET SHEET with:
         - Cell B1 (panel type)
@@ -46,14 +46,14 @@ class PalletExporter:
         - Cell G3 (date)
         - Serial numbers and electrical values in the pallet slots
         Uses date-based folders and finds the next available pallet number to prevent overwrites.
-        
+
         Args:
             pallet: Pallet dict with serial_numbers list
             panel_type: Panel type string (e.g., "200WT", "220WT", etc.) to write to Cell B1
-            
+
         Returns:
             Path to exported Excel file
-            
+
         Raises:
             FileNotFoundError: If source workbook doesn't exist
             KeyError: If required sheets are missing
@@ -61,14 +61,18 @@ class PalletExporter:
         """
         if not self.source_workbook.exists():
             raise FileNotFoundError(f"Source workbook not found: {self.source_workbook}")
-        
+
+        # Capture export date once to ensure consistency across all date operations
+        # This prevents date mismatches when export crosses midnight
+        export_datetime = datetime.now()
+
         # Progress: 0-10% - Setup
         if progress_callback:
             progress_callback("Preparing export...", 5)
         
         # Get date-based export directory (creates if needed)
         try:
-            export_dir = self._get_export_dir()
+            export_dir = self._get_export_dir(export_datetime)
         except RuntimeError as e:
             # Re-raise with more context about the export folder
             raise RuntimeError(
@@ -119,8 +123,8 @@ class PalletExporter:
             
             if pallet_sheet_name:
                 try:
-                    # Update the sheet (this sets Cell B3)
-                    self._update_pallet_sheet(wb[pallet_sheet_name], pallet, panel_type, customer, progress_callback)
+                    # Update the sheet (this sets Cell B3 and G3 dates)
+                    self._update_pallet_sheet(wb[pallet_sheet_name], pallet, panel_type, customer, export_datetime, progress_callback)
                     if progress_callback:
                         progress_callback("Pallet sheet updated", 75)
                     
@@ -222,7 +226,7 @@ class PalletExporter:
             except Exception:
                 pass  # Non-critical if temp file cleanup fails
     
-    def _get_export_dir(self) -> Path:
+    def _get_export_dir(self, export_datetime: datetime) -> Path:
         """Get date-based export directory (creates if needed)"""
         # Ensure base export directory exists first
         try:
@@ -233,13 +237,12 @@ class PalletExporter:
                 f"Error: {e}\n\n"
                 f"Please ensure you have write permissions to this location."
             ) from e
-        
-        current_date = datetime.now()
+
         try:
-            date_folder = current_date.strftime("%-d-%b-%y")  # Unix: removes leading zero
+            date_folder = export_datetime.strftime("%-d-%b-%y")  # Unix: removes leading zero
         except ValueError:
-            date_folder = current_date.strftime("%#d-%b-%y")  # Windows: removes leading zero
-        
+            date_folder = export_datetime.strftime("%#d-%b-%y")  # Windows: removes leading zero
+
         export_dir = self.base_export_dir / date_folder
         try:
             export_dir.mkdir(parents=True, exist_ok=True)
@@ -383,6 +386,7 @@ class PalletExporter:
     
     def _update_pallet_sheet(self, sheet, pallet: Dict, panel_type: Optional[str] = None,
                             customer: Optional[Dict] = None,
+                            export_datetime: Optional[datetime] = None,
                             progress_callback: Optional[callable] = None):
         """
         Update PALLET SHEET with panel type, date, serial numbers, and electrical values.
@@ -484,7 +488,7 @@ class PalletExporter:
         
         # Set current date in Cell G3 (formatted as d-Mmm-yy, e.g., "6-Jan-26")
         # Formatting automatically preserved
-        current_date = datetime.now()
+        current_date = export_datetime if export_datetime else datetime.now()
         try:
             date_formatted = current_date.strftime("%-d-%b-%y")  # Unix: removes leading zero
         except ValueError:
