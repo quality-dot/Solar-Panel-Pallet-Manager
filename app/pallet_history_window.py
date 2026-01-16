@@ -110,7 +110,7 @@ class PalletHistoryWindow:
         
         tk.Label(date_filter_frame, text="Date Filter:", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=5)
         
-        self.filter_var = tk.StringVar(value="All")
+        self.filter_var = tk.StringVar(value="Today")
         filter_options = [
             ("All", "All"),
             ("Today", "Today"),
