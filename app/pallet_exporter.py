@@ -424,6 +424,10 @@ class PalletExporter:
                 # Fallback: direct access
                 sheet.cell(row=3, column=1).value = customer_text
         
+        # Calculate panel count for use in multiple cells
+        serials = pallet.get('serial_numbers', [])
+        panel_count = len(serials) if serials else 0
+
         # Set panel type in Cell B1 (formatting automatically preserved)
         # Handle merged cells - if B1 is part of a merge, we need to unmerge, set value, then remerge
         # Optimized: Cache merged ranges to avoid repeated iteration
@@ -443,7 +447,7 @@ class PalletExporter:
                             merged_range_b1 = str(merge_range)
                             merge_range_obj_b1 = merge_range
                             break
-                    
+
                     if merged_range_b1:
                         sheet.unmerge_cells(merged_range_b1)
                         sheet.cell(row=merge_range_obj_b1.min_row, column=merge_range_obj_b1.min_col).value = panel_type
@@ -454,10 +458,36 @@ class PalletExporter:
             except Exception:
                 # Fallback: direct access if anything fails
                 sheet.cell(row=1, column=2).value = panel_type
+
+        # Set panel quantity in Cell B2
+        # Handle merged cells - if B2 is part of a merge, we need to unmerge, set value, then remerge
+        try:
+            cell_b2 = sheet.cell(row=2, column=2)
+            if not isinstance(cell_b2, MergedCell):
+                # Not merged, set directly (fastest)
+                cell_b2.value = panel_count
+            else:
+                # Is merged, need to unmerge/remerge
+                merged_range_b2 = None
+                merge_range_obj_b2 = None
+                for merge_range in list(sheet.merged_cells.ranges):
+                    if 'B2' in str(merge_range):
+                        merged_range_b2 = str(merge_range)
+                        merge_range_obj_b2 = merge_range
+                        break
+
+                if merged_range_b2:
+                    sheet.unmerge_cells(merged_range_b2)
+                    sheet.cell(row=merge_range_obj_b2.min_row, column=merge_range_obj_b2.min_col).value = panel_count
+                    sheet.merge_cells(merged_range_b2)
+                else:
+                    # Fallback: direct access
+                    sheet.cell(row=2, column=2).value = panel_count
+        except Exception:
+            # Fallback: direct access if anything fails
+            sheet.cell(row=2, column=2).value = panel_count
         
         # Calculate and set weight in Cell D2: number of panels × 40
-        serials = pallet.get('serial_numbers', [])
-        panel_count = len(serials) if serials else 0
         weight = panel_count * 40
         
         # Update Cell D2 with calculated weight - handle merged cells
