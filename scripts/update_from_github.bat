@@ -117,3 +117,5 @@ echo   From source: python app\pallet_builder_gui.py
 echo   Built app: See dist\ directory
 
 pause
+
+
