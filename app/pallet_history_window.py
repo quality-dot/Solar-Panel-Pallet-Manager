@@ -584,11 +584,20 @@ class PalletHistoryWindow:
         """Show details for a pallet (deferred to avoid lag)"""
         # Find pallet in history (use cached data directly)
         pallets = self.pallet_manager.data.get('pallets', [])
-        # Handle both string and int comparisons
-        self.selected_pallet = next(
-            (p for p in pallets if str(p.get('pallet_number', '')) == str(pallet_num)), 
-            None
-        )
+        # Find all pallets with this number, then select the most recent one (by completed_at)
+        matching_pallets = [
+            p for p in pallets if str(p.get('pallet_number', '')) == str(pallet_num)
+        ]
+
+        if matching_pallets:
+            # Sort by completed_at descending (most recent first)
+            matching_pallets.sort(
+                key=lambda p: p.get('completed_at', ''),
+                reverse=True
+            )
+            self.selected_pallet = matching_pallets[0]  # Most recent
+        else:
+            self.selected_pallet = None
         
         if self.selected_pallet:
             self.update_details()
@@ -1005,13 +1014,19 @@ class PalletHistoryWindow:
         
         for pallet_num in selected_pallet_nums:
             # Handle both string and int comparisons (pallet_num from tree might be string)
-            pallet = next(
-                (p for p in all_pallets 
-                 if str(p.get('pallet_number', '')) == str(pallet_num)), 
-                None
-            )
-            if pallet:
-                selected_pallets.append(pallet)
+            # Find all pallets with this number, then select the most recent one
+            matching_pallets = [
+                p for p in all_pallets
+                if str(p.get('pallet_number', '')) == str(pallet_num)
+            ]
+
+            if matching_pallets:
+                # Sort by completed_at descending (most recent first)
+                matching_pallets.sort(
+                    key=lambda p: p.get('completed_at', ''),
+                    reverse=True
+                )
+                selected_pallets.append(matching_pallets[0])  # Most recent
         
         print(f"DEBUG: Selected pallets: {len(selected_pallets)}")  # Debug output
         return selected_pallets
