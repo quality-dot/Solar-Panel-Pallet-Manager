@@ -259,7 +259,7 @@ Pallet Manager provides:
 - Can update workbook with pallet information (optional)
 
 **How it works:**
-1. App searches for Excel files in `EXCEL/` folder
+1. App searches for Excel files in `data/EXCEL/` folder
 2. Looks for `CURRENT.xlsx` (pointer file) first
 3. If not found, finds most recent `BUILD YYYY Q-X.xlsx` file
 4. Opens workbook and reads DATA sheet
@@ -268,7 +268,7 @@ Pallet Manager provides:
 
 **Workbook Structure:**
 ```
-Excel Workbook
+Excel Workbook (located in data/EXCEL/)
 ├── DATA Sheet
 │   ├── Column B: SerialNo (panel serial numbers)
 │   ├── Column C: Date
@@ -325,7 +325,7 @@ Excel Workbook
 
 **How it works:**
 1. When pallet is exported:
-   - Creates date folder: `PALLETS/6-Jan-26/`
+   - Creates date folder: `data/PALLETS/6-Jan-26/`
    - Generates filename: `Pallet_001_2025-01-06_14-30-00.xlsx`
    - Includes:
      - Pallet number
@@ -581,26 +581,32 @@ Format Check
 ```
 Pallet Manager/
 │
-├── PALLETS/                          # Pallet exports
-│   ├── pallet_history.json          # History database
-│   ├── 6-Jan-26/                    # Date folders
-│   │   ├── Pallet_001_2025-01-06_14-30-00.xlsx
-│   │   └── Pallet_002_2025-01-06_15-45-00.xlsx
-│   └── 7-Jan-26/
-│       └── Pallet_003_2025-01-07_09-15-00.xlsx
+├── data/                             # User data and runtime files
+│   ├── PALLETS/                      # Pallet exports
+│   │   ├── pallet_history.json       # History database
+│   │   ├── 6-Jan-26/                 # Date folders
+│   │   │   ├── Pallet_001_2025-01-06_14-30-00.xlsx
+│   │   │   └── Pallet_002_2025-01-06_15-45-00.xlsx
+│   │   └── 7-Jan-26/
+│   │       └── Pallet_003_2025-01-07_09-15-00.xlsx
+│   │
+│   ├── EXCEL/                        # Excel workbooks
+│   │   ├── CURRENT.xlsx              # Pointer to current workbook
+│   │   └── BUILD 2025 Q-1.xlsx       # Quarterly workbooks
+│   │
+│   ├── IMPORTED DATA/                # Processed simulator data
+│   │   └── (processed files)
+│   │
+│   ├── SUN SIMULATOR DATA/           # Drop new files here
+│   │   └── (simulator export files)
+│   │
+│   └── LOGS/                         # Application logs
+│       └── (log files)
 │
-├── EXCEL/                            # Excel workbooks
-│   ├── CURRENT.xlsx                 # Pointer to current workbook
-│   └── BUILD 2025 Q-1.xlsx          # Quarterly workbooks
-│
-├── IMPORTED DATA/                    # Processed simulator data
-│   └── (processed files)
-│
-├── SUN SIMULATOR DATA/               # Drop new files here
-│   └── (simulator export files)
-│
-└── LOGS/                             # Application logs
-    └── (log files)
+├── docs/                             # Documentation
+├── scripts/                          # Build scripts
+├── assets/                           # Application assets
+└── [other folders]
 ```
 
 ### File Locations
@@ -608,10 +614,12 @@ Pallet Manager/
 **macOS:**
 - If installed in `/Applications`: `~/Documents/Pallet Manager/`
 - If run from source: Project directory
+- Data files: `~/Documents/Pallet Manager/data/`
 
 **Windows:**
 - Same directory as the application executable
 - Or user's Documents folder (depending on installation)
+- Data files: Same location as executable + `data/` subfolder
 
 ### File Naming Conventions
 

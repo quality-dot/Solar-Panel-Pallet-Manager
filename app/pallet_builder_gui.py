@@ -613,7 +613,7 @@ class PalletBuilderGUI:
             error_text = (
                 "Could not find pallet workbook.\n\n"
                 "Please ensure one of the following:\n"
-                "  • EXCEL/CURRENT.xlsx exists, OR\n"
+                "  • data/EXCEL/CURRENT.xlsx exists, OR\n"
                 "  • A BUILD YYYY Q-X.xlsx file is in the EXCEL folder\n\n"
                 "After placing the workbook, close this window\n"
                 "and launch Pallet Manager again."
@@ -1615,8 +1615,8 @@ class PalletBuilderGUI:
                         "No Data Source - ERROR CODE: DS001",
                         "No database or workbook available for barcode validation.\n\n"
                         "TROUBLESHOOTING:\n"
-                        "1. Check if SerialDatabase is initialized (file: PALLETS/serial_database.xlsx)\n"
-                        "2. Check if workbook exists (file: EXCEL/CURRENT.xlsx)\n"
+                        "1. Check if SerialDatabase is initialized (file: data/PALLETS/serial_database.xlsx)\n"
+                        "2. Check if workbook exists (file: data/EXCEL/CURRENT.xlsx)\n"
                         "3. Use 'Import Data' button to import simulator data\n"
                         "4. Verify file permissions on PALLETS and EXCEL folders\n\n"
                         "If issue persists, check console for detailed error messages.",
@@ -1630,11 +1630,11 @@ class PalletBuilderGUI:
                         f"Serial number '{serial}' not found in database.\n\n"
                         "TROUBLESHOOTING:\n"
                         "1. Verify the barcode was scanned correctly\n"
-                        "2. Check if this serial exists in: PALLETS/serial_database.xlsx\n"
+                        "2. Check if this serial exists in: data/PALLETS/serial_database.xlsx\n"
                         "3. If this is a new panel, import simulator data using 'Import Data' button\n"
                         "4. Verify the serial format matches expected pattern\n\n"
                         f"Serial searched: '{serial}'\n"
-                        "Database location: PALLETS/serial_database.xlsx",
+                        "Database location: data/PALLETS/serial_database.xlsx",
                         parent=self.root
                     )
                     self.scan_entry.delete(0, tk.END)
@@ -1647,7 +1647,7 @@ class PalletBuilderGUI:
                     "Workbook Error - ERROR CODE: WB001",
                     f"Workbook file not found.\n\n"
                     f"TROUBLESHOOTING:\n"
-                    f"1. Expected location: EXCEL/CURRENT.xlsx\n"
+                    f"1. Expected location: data/EXCEL/CURRENT.xlsx\n"
                     f"2. Check if EXCEL folder exists in project root\n"
                     f"3. Verify file permissions\n"
                     f"4. Try using 'Import Data' to ensure workbook is created\n\n"
@@ -2194,12 +2194,12 @@ class PalletBuilderGUI:
                 "Customer Not Found - ERROR CODE: CU001",
                 f"Customer '{customer_display_name}' not found in customer database.\n\n"
                 "TROUBLESHOOTING:\n"
-                "1. Verify customer exists in: CUSTOMERS/customers.xlsx\n"
+                "1. Verify customer exists in: data/CUSTOMERS/customers.xlsx\n"
                 "2. Check if customer was recently deleted\n"
                 "3. Use Customer Management button to add a new customer\n"
                 "4. Try refreshing the customer list in Customer Management\n\n"
                 f"Searched for: '{customer_display_name}'\n"
-                f"Customer file: CUSTOMERS/customers.xlsx",
+                f"Customer file: data/CUSTOMERS/customers.xlsx",
                 parent=self.root
             )
             return
@@ -2800,7 +2800,7 @@ class PalletBuilderGUI:
                         messagebox.showerror(
                             "Database Error",
                             f"Could not initialize serial database:\n{e}\n\n"
-                            f"Expected location: PALLETS/serial_database.xlsx\n\n"
+                            f"Expected location: data/PALLETS/serial_database.xlsx\n\n"
                             "Please ensure the PALLETS folder exists and is writable.",
                             parent=self.root
                         )

@@ -32,38 +32,58 @@ This document describes the organization of the Pallet Manager project.
 │   ├── create_windows_installer.nsi # NSIS installer script
 │   ├── create_dmg.sh             # Create DMG file
 │   ├── setup_windows.bat         # Windows setup script
+│   ├── postinstall               # macOS post-install script
 │   ├── release.sh                # Release workflow
 │   ├── update_version.py         # Version updater
 │   ├── create_icons.sh           # Icon creation
 │   └── create_update_info.py     # Update info creator
 │
 ├── docs/                         # Documentation
-│   ├── MACOS_INSTALLATION.md
-│   ├── WINDOWS_INSTALLATION.md
-│   ├── DEPLOYMENT.md
-│   ├── UPDATES.md
+│   ├── APP_OVERVIEW.md           # Complete application overview
+│   ├── USER_GUIDE.md             # User installation and usage
+│   ├── DEVELOPER_GUIDE.md        # Build and deployment guide
+│   ├── PROJECT_STRUCTURE.md      # Directory organization
+│   ├── SCRIPTS_GUIDE.md          # Scripts reference
+│   ├── CHANGELOG.md              # Version history
+│   ├── STABILITY_SAFEGUARDS.md   # Stability documentation
+│   ├── DEPLOYMENT.md             # Deployment guide
+│   ├── BUG_TESTING_PLAN.md       # Testing procedures
+│   ├── PERFORMANCE_OPTIMIZATIONS.md
+│   ├── PACKAGING_OPTIMIZATIONS.md
+│   ├── REPORTLAB_INSTALLATION.md
 │   ├── TROUBLESHOOTING.md
-│   └── ...
+│   └── UPDATES.md
 │
-├── icons/                        # Application icons
-│   ├── PalletManager.icns       # macOS icon
-│   └── PalletManager.ico         # Windows icon
+├── assets/                       # Application assets
+│   ├── PalletManager.icns        # macOS icon
+│   ├── PalletManager.ico         # Windows icon
+│   └── Pallet icon.png           # Source icon
 │
-├── installer_scripts/            # Installer helper scripts
-│   └── postinstall              # macOS post-install script
+├── tools/                        # External tools and dependencies
+│   ├── README.md
+│   └── SumatraPDF/               # PDF viewer for Windows
 │
-├── EXCEL/                        # Excel workbooks (user data)
-├── PALLETS/                      # Exported pallets (user data)
-├── IMPORTED DATA/                # Processed simulator data
-├── SUN SIMULATOR DATA/           # Drop new simulator files here
-├── LOGS/                         # Application logs
+├── data/                         # User data and runtime files
+│   ├── CUSTOMERS/                # Customer database
+│   ├── EXCEL/                    # Excel workbooks
+│   ├── PALLETS/                  # Exported pallet files
+│   ├── IMPORTED DATA/            # Processed simulator data
+│   ├── SUN SIMULATOR DATA/       # Drop new simulator files here
+│   └── LOGS/                     # Application logs
+│
+├── tests/                        # Test suite
+│   ├── __init__.py
+│   ├── test_bugs.py              # Bug regression tests
+│   ├── test_long_term_stability.py # Stability tests
+│   ├── test_stress_simple.py     # Simple stress tests
+│   ├── test_stress.py            # Full stress tests
+│   └── verify_dependencies.py    # Dependency verification
 │
 ├── README.md                     # Main project documentation
-├── QUICK_START.md                # Quick reference guide
 ├── requirements.txt              # Python dependencies
 ├── setup.py                      # macOS build configuration
-├── pallet_builder.spec           # Windows build configuration
-└── verify_dependencies.py        # Dependency checker
+├── launch_app.py                 # Application launcher
+└── [build files]                 # Generated during build
 ```
 
 ## 📋 File Organization

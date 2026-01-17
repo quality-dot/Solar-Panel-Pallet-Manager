@@ -58,11 +58,11 @@ If macOS blocks the app:
 
 When you first run the app, it automatically creates these folders:
 
-- **PALLETS/** - Exported pallet files
-- **IMPORTED DATA/** - Processed simulator data
-- **SUN SIMULATOR DATA/** - Drop new simulator files here
-- **EXCEL/** - Your Excel workbooks
-- **LOGS/** - Application logs
+- **data/PALLETS/** - Exported pallet files
+- **data/IMPORTED DATA/** - Processed simulator data
+- **data/SUN SIMULATOR DATA/** - Drop new simulator files here
+- **data/EXCEL/** - Your Excel workbooks
+- **data/LOGS/** - Application logs
 
 **Location:**
 - **macOS:** `~/Documents/Pallet Manager/` (if installed in Applications)
@@ -70,7 +70,7 @@ When you first run the app, it automatically creates these folders:
 
 ### Setting Up Your Data
 
-1. **Place Excel workbooks** in the `EXCEL/` folder:
+1. **Place Excel workbooks** in the `data/EXCEL/` folder:
    - `CURRENT.xlsx` (optional - points to current workbook)
    - `BUILD YYYY Q-X.xlsx` (your quarterly pallet workbooks)
 
@@ -105,7 +105,7 @@ When you first run the app, it automatically creates these folders:
 
 1. **Click "Export Pallet"** button (when pallet is full or manually)
 2. **Select panel type** (200W, 220W, 325W, etc.)
-3. **Pallet is exported** to `PALLETS/[Date]/` folder
+3. **Pallet is exported** to `data/PALLETS/[Date]/` folder
 4. **Excel file is created** with all panel information
 5. **Display is cleared** - ready for next pallet
 
@@ -170,7 +170,7 @@ This section covers common issues and their solutions. For more detailed trouble
 
 3. **Verify database:**
    - Check `IMPORTED DATA/` folder has processed files
-   - Check `PALLETS/serial_database.xlsx` exists
+   - Check `data/PALLETS/serial_database.xlsx` exists
 
 ### Excel File Locked
 
@@ -196,7 +196,7 @@ This section covers common issues and their solutions. For more detailed trouble
 
 **Solutions:**
 1. **Check logs:**
-   - Look in `LOGS/` folder for error messages
+   - Look in `data/LOGS/` folder for error messages
 
 2. **Verify data files:**
    - Check that Excel files aren't corrupted
@@ -268,7 +268,7 @@ Yes! Use the "Pallet History" feature to select multiple pallets and export them
 If you encounter issues not covered here:
 
 1. **Check the logs:**
-   - Look in `LOGS/` folder for detailed error messages
+   - Look in `data/LOGS/` folder for detailed error messages
 
 2. **Review this guide:**
    - Make sure you've followed all setup steps
@@ -281,14 +281,14 @@ If you encounter issues not covered here:
 ## 📝 Tips & Best Practices
 
 1. **Regular backups:**
-   - Periodically backup your `EXCEL/` and `PALLETS/` folders
+   - Periodically backup your `data/EXCEL/` and `data/PALLETS/` folders
 
 2. **Organize files:**
    - Keep simulator files in `SUN SIMULATOR DATA/` until processed
    - Move processed files to archive if needed
 
 3. **Monitor logs:**
-   - Check `LOGS/` folder if you encounter issues
+   - Check `data/LOGS/` folder if you encounter issues
    - Logs contain detailed information about operations
 
 4. **Keep Excel closed:**

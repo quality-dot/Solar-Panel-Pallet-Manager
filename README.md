@@ -105,13 +105,17 @@ scripts\install_all_windows.bat
 ├── app/                    # Application source code
 ├── scripts/                # Build and installer scripts
 ├── docs/                   # Documentation
-├── icons/                  # Application icons
-├── installer_scripts/       # Installer helper scripts
-├── EXCEL/                  # Excel workbooks (user data)
-├── PALLETS/                # Exported pallets (user data)
-├── IMPORTED DATA/          # Processed simulator data
-├── SUN SIMULATOR DATA/     # Drop new simulator files here
-└── LOGS/                   # Application logs
+├── assets/                 # Application icons and assets
+├── tools/                  # External tools and dependencies
+├── data/                   # User data and runtime files
+│   ├── CUSTOMERS/          # Customer data
+│   ├── EXCEL/              # Excel workbooks
+│   ├── PALLETS/            # Exported pallets
+│   ├── IMPORTED DATA/      # Processed simulator data
+│   ├── SUN SIMULATOR DATA/ # Drop new simulator files here
+│   └── LOGS/               # Application logs
+├── tests/                  # Test suite
+└── [other files]           # Build configs, requirements, etc.
 ```
 
 See [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) for detailed structure.

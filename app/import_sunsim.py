@@ -588,7 +588,7 @@ def find_pallet_workbook(override_path: Optional[str] = None, logger: Optional[l
     Find the target pallet workbook.
     Priority:
     1. Override path (--xlsx argument)
-    2. EXCEL/CURRENT.xlsx
+    2. data/EXCEL/CURRENT.xlsx
     3. Most recently modified BUILD YYYY Q-X.xlsx file
     """
     if override_path:
@@ -627,7 +627,7 @@ def find_pallet_workbook(override_path: Optional[str] = None, logger: Optional[l
     
     if not build_files:
         if logger:
-            logger.error("No pallet workbook found in EXCEL/ directory")
+            logger.error("No pallet workbook found in data/EXCEL/ directory")
         return None
     
     # Return most recently modified

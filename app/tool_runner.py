@@ -50,8 +50,8 @@ def get_default_config() -> Dict[str, Any]:
     return {
         'input_folder': '../CSV_INPUT',
         'excel_folder': '../EXCEL',
-        'current_workbook': '../EXCEL/CURRENT.xlsx',
-        'backup_folder': '../EXCEL/backups',
+        'current_workbook': '../data/EXCEL/CURRENT.xlsx',
+        'backup_folder': '../data/EXCEL/backups',
         'log_folder': '../LOGS',
         'archive_folder': '../ARCHIVE/processed_files',
         'extra_files_folder': '../ARCHIVE/unprocessed_extra',
