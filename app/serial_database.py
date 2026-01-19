@@ -15,6 +15,7 @@ import pandas as pd
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
 import shutil
+from app.path_utils import FileMonitor
 
 
 def normalize_serial(serial) -> str:
@@ -96,6 +97,10 @@ class SerialDatabase:
         self._data_cache_timestamp = 0
         self._data_cache_ttl = 60  # Data cache valid for 1 minute (reduced for lighter memory)
         self._data_cache_max_size = 1000  # Limit cache size to prevent memory bloat
+        
+        # File monitoring for real-time change detection
+        self.file_monitor = FileMonitor(self.db_file, debug=False)
+        self.master_file_monitor = FileMonitor(self.master_data_file, debug=False) if self.master_data_file else None
     
     def _ensure_database(self):
         """Create Excel database with headers if it doesn't exist"""
@@ -144,6 +149,12 @@ class SerialDatabase:
     def _refresh_serial_cache(self):
         """Refresh the serial cache if it's stale or missing"""
         current_time = time_module.time()
+        
+        # Check if file has been modified externally (real-time detection)
+        if self.file_monitor.has_changed():
+            # File changed externally - invalidate cache immediately
+            self._serial_cache = None
+            self._serial_cache_timestamp = 0
         
         # Check if cache is still valid
         if (self._serial_cache is not None and 
@@ -216,6 +227,10 @@ class SerialDatabase:
         self._serial_cache_timestamp = 0
         self._data_cache = {}
         self._data_cache_timestamp = 0
+        # Reset file monitors to prevent false positives after our own updates
+        self.file_monitor.reset()
+        if self.master_file_monitor:
+            self.master_file_monitor.reset()
     
     def _refresh_data_cache(self, required_serials: Optional[List[str]] = None):
         """
@@ -226,6 +241,18 @@ class SerialDatabase:
             required_serials: Optional list of serials to load. If None, doesn't pre-load.
         """
         current_time = time_module.time()
+        
+        # Check if database file has been modified externally (real-time detection)
+        if self.file_monitor.has_changed():
+            # File changed externally - invalidate cache immediately
+            self._data_cache = {}
+            self._data_cache_timestamp = 0
+        
+        # Check if master data file has been modified externally
+        if self.master_file_monitor and self.master_file_monitor.has_changed():
+            # Master file changed externally - invalidate cache immediately
+            self._data_cache = {}
+            self._data_cache_timestamp = 0
         
         # Check if cache is still valid
         if (self._data_cache and 

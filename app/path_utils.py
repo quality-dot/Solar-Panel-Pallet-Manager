@@ -8,6 +8,7 @@ is running as a script or as a packaged executable.
 
 import sys
 import os
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -191,5 +192,93 @@ def get_app_dir_cached() -> Path:
     if _app_dir_cache is None:
         _app_dir_cache = get_app_dir()
     return _app_dir_cache
+
+
+class FileMonitor:
+    """
+    Lightweight file change detection using modification time.
+
+    Provides real-time file change detection with minimal performance impact.
+    Uses file modification time (st_mtime) for change detection.
+    """
+
+    def __init__(self, file_path: Path, debug: bool = False):
+        """
+        Initialize file monitor.
+
+        Args:
+            file_path: Path to the file to monitor
+            debug: Enable debug logging
+        """
+        self.file_path = file_path
+        self.debug = debug
+        self.last_mtime: Optional[float] = None
+        self._update_mtime()
+        self.change_count = 0
+
+        if self.debug:
+            print(f"DEBUG: FileMonitor initialized for {file_path}")
+
+    def has_changed(self) -> bool:
+        """
+        Check if file has been modified since last check.
+
+        Returns:
+            True if file has changed, False otherwise
+        """
+        if not self.file_path.exists():
+            if self.debug:
+                print(f"DEBUG: File {self.file_path} does not exist")
+            return False
+
+        try:
+            current_mtime = self.file_path.stat().st_mtime
+
+            if self.last_mtime is None:
+                # First check - initialize and return False (no change yet)
+                self.last_mtime = current_mtime
+                if self.debug:
+                    print(f"DEBUG: Initial mtime for {self.file_path}: {current_mtime}")
+                return False
+
+            if current_mtime != self.last_mtime:
+                self.change_count += 1
+                if self.debug:
+                    print(f"DEBUG: File {self.file_path} changed!")
+                    print(f"  Old mtime: {self.last_mtime}")
+                    print(f"  New mtime: {current_mtime}")
+                    print(f"  Change count: {self.change_count}")
+                self.last_mtime = current_mtime
+                return True
+
+            return False
+
+        except (OSError, FileNotFoundError) as e:
+            if self.debug:
+                print(f"DEBUG: Error checking file {self.file_path}: {e}")
+            return False
+
+    def _update_mtime(self):
+        """Update stored modification time"""
+        if self.file_path.exists():
+            try:
+                self.last_mtime = self.file_path.stat().st_mtime
+            except OSError:
+                self.last_mtime = None
+
+    def reset(self):
+        """Reset the monitor (useful for testing)"""
+        self.last_mtime = None
+        self.change_count = 0
+        self._update_mtime()
+
+    def get_info(self) -> dict:
+        """Get monitoring information for debugging"""
+        return {
+            'file_path': str(self.file_path),
+            'last_mtime': self.last_mtime,
+            'change_count': self.change_count,
+            'exists': self.file_path.exists()
+        }
 
 
