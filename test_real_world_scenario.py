@@ -25,7 +25,8 @@ def simulate_user_workflow():
     base_dir = get_base_dir()
     db_file = base_dir / "data" / "PALLETS" / "serial_database.xlsx"
     imported_dir = base_dir / "data" / "IMPORTED DATA"
-    master_file = imported_dir / "sun_simulator_data.xlsx"
+    # Master sun simulator data now lives in IMPORTED DATA/MASTER/
+    master_file = imported_dir / "MASTER" / "sun_simulator_data.xlsx"
     
     # Ensure directories exist
     db_file.parent.mkdir(parents=True, exist_ok=True)

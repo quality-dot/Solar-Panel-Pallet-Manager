@@ -480,7 +480,8 @@ class PalletBuilderGUI:
             self._update_loading_progress(60, "Initializing serial database...")
             db_file = project_root / "PALLETS" / "serial_database.xlsx"
             imported_data_dir = project_root / "IMPORTED DATA"
-            master_data_file = imported_data_dir / "sun_simulator_data.xlsx"
+            # Master sun simulator data now lives in IMPORTED DATA/MASTER/
+            master_data_file = imported_data_dir / "MASTER" / "sun_simulator_data.xlsx"
             self.serial_db = SerialDatabase(db_file, imported_data_dir, master_data_file, defer_init=True)
             self.root.update()
             
@@ -1625,23 +1626,33 @@ class PalletBuilderGUI:
                     return
                 
                 if not is_valid:
-                    messagebox.showerror(
-                        "Invalid Barcode - ERROR CODE: BC001",
-                        f"Serial number '{serial}' not found in database.\n\n"
-                        "TROUBLESHOOTING:\n"
-                        "1. Verify the barcode was scanned correctly\n"
-                        "2. Check if this serial exists in: data/PALLETS/serial_database.xlsx\n"
-                        "3. If this is a new panel, import simulator data using 'Import Data' button\n"
-                        "4. Verify the serial format matches expected pattern\n\n"
-                        f"Serial searched: '{serial}'\n"
-                        "Database location: data/PALLETS/serial_database.xlsx",
+                    # Data truly not found – give operator a choice to proceed with
+                    # general theoretical values instead of hard-blocking the scan.
+                    use_fallback = messagebox.askyesno(
+                        "Data Not Found",
+                        (
+                            "Sun simulator data was not found for this panel.\n\n"
+                            f"Serial number: '{serial}'\n\n"
+                            "Select 'Yes' to continue and use general theoretical "
+                            "values for this panel.\n"
+                            "Select 'No' to cancel and rescan or update the data."
+                        ),
                         parent=self.root
                     )
-                    self.scan_entry.delete(0, tk.END)
-                    self.scan_entry.focus()
-                    if self.status_label:
-                        self.status_label.config(text=f"Error: {serial} not found", fg="red")
-                    return
+
+                    if not use_fallback:
+                        # User chose not to proceed with synthetic data
+                        self.scan_entry.delete(0, tk.END)
+                        self.scan_entry.focus()
+                        if self.status_label:
+                            self.status_label.config(text=f"Error: {serial} not found", fg="red")
+                        return
+
+                    # Optional: track that this serial used fallback, for potential
+                    # logging or display elsewhere.
+                    if not hasattr(self, "_fallback_serials"):
+                        self._fallback_serials = set()
+                    self._fallback_serials.add(serial)
             except FileNotFoundError as e:
                 messagebox.showerror(
                     "Workbook Error - ERROR CODE: WB001",

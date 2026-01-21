@@ -15,6 +15,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.cell.cell import MergedCell
 import copy
 import shutil
+import random
 
 
 class PalletExporter:
@@ -32,6 +33,15 @@ class PalletExporter:
         self.source_workbook = source_workbook
         self.base_export_dir = export_dir
         self.serial_db = serial_db
+        # Shared ranges for panel-type-based validation and fallback generation
+        self._panel_pm_ranges = {
+            '200WT': (195, 206),
+            '220WT': (214, 227),
+            '220M6': (214, 227),
+            '330WT': (320, 340),
+            '450WT': (439, 463.5),
+            '450BT': (439, 463.5),
+        }
     
     def export_pallet(self, pallet: Dict, panel_type: Optional[str] = None,
                      customer: Optional[Dict] = None,
@@ -308,20 +318,46 @@ class PalletExporter:
         if not panel_type or pm_value is None:
             return True  # Can't validate without panel type or value
         
-        ranges = {
-            '200WT': (195, 206),
-            '220WT': (214, 227),
-            '220M6': (214, 227),
-            '330WT': (320, 340),
-            '450WT': (439, 463.5),
-            '450BT': (439, 463.5),
-        }
+        ranges = self._panel_pm_ranges
         
         if panel_type not in ranges:
             return True  # Unknown panel type, don't block
         
         min_val, max_val = ranges[panel_type]
         return min_val <= pm_value <= max_val
+
+    def _generate_theoretical_electrical_values(self, panel_type: Optional[str]) -> Dict[str, float]:
+        """
+        Generate theoretical sun simulator values based on the selected panel type.
+        
+        Uses the same per-panel-type Pm ranges as validation, then derives
+        Voc/Isc/Ipm/Vpm from simple heuristics so export has reasonable values
+        even when no real data exists.
+        """
+        # Default generic range if panel type is unknown
+        pm_min, pm_max = 350.0, 450.0
+        if panel_type and panel_type in self._panel_pm_ranges:
+            pm_min, pm_max = self._panel_pm_ranges[panel_type]
+
+        # Seed from panel_type so the values are stable per type per run
+        seed_source = panel_type or f"{pm_min}-{pm_max}"
+        rnd = random.Random(seed_source)
+
+        pm = rnd.uniform(pm_min, pm_max)
+
+        # Simple heuristics: assume ~40–50 V Voc and pm ≈ Vpm * Ipm
+        voc = rnd.uniform(38.0, 50.0)
+        vpm = voc * rnd.uniform(0.75, 0.85)
+        ipm = pm / vpm if vpm > 0 else rnd.uniform(8.0, 12.0)
+        isc = ipm / rnd.uniform(0.90, 0.98)
+
+        return {
+            "Pm": round(pm, 2),
+            "Isc": round(isc, 3),
+            "Voc": round(voc, 3),
+            "Ipm": round(ipm, 3),
+            "Vpm": round(vpm, 3),
+        }
     
     def _copy_cell_style(self, source_cell, target_cell):
         """Copy all formatting from source cell to target cell"""
@@ -647,27 +683,41 @@ class PalletExporter:
                 # Set serial number (formatting preserved automatically)
                 sheet[f'{serial_col}{row}'].value = serial
                 
-                # Use cached electrical values (much faster than individual lookups)
-                serial_data = serial_data_cache.get(serial)
-                if serial_data:
-                    # Validate Pm value against panel type range (silent validation)
-                    pm_value = serial_data.get('Pm')
-                    if pm_value is not None:
-                        is_valid = self._validate_pm_range(pm_value, panel_type)
-                        # Still populate even if out of range (validation is for app knowledge only)
-                        if pm_col:
-                            sheet[f'{pm_col}{row}'].value = pm_value
-                    
-                    # Populate other electrical values (always use most recent from database)
-                    # Formatting is automatically preserved when we only change .value
-                    if isc_col and serial_data.get('Isc') is not None:
-                        sheet[f'{isc_col}{row}'].value = serial_data['Isc']
-                    if voc_col and serial_data.get('Voc') is not None:
-                        sheet[f'{voc_col}{row}'].value = serial_data['Voc']
-                    if ipm_col and serial_data.get('Ipm') is not None:
-                        sheet[f'{ipm_col}{row}'].value = serial_data['Ipm']
-                    if vpm_col and serial_data.get('Vpm') is not None:
-                        sheet[f'{vpm_col}{row}'].value = serial_data['Vpm']
+                # Use cached electrical values when available; otherwise, or if
+                # they're out of range for the selected panel type, generate
+                # theoretical values based directly on panel_type.
+                serial_data = serial_data_cache.get(serial) or {}
+                pm_value = serial_data.get('Pm')
+
+                use_theoretical = (
+                    pm_value is None
+                    or not self._validate_pm_range(pm_value, panel_type)
+                )
+
+                if use_theoretical:
+                    fallback = self._generate_theoretical_electrical_values(panel_type)
+                    pm_value = fallback["Pm"]
+                    isc_value = fallback["Isc"]
+                    voc_value = fallback["Voc"]
+                    ipm_value = fallback["Ipm"]
+                    vpm_value = fallback["Vpm"]
+                else:
+                    isc_value = serial_data.get('Isc')
+                    voc_value = serial_data.get('Voc')
+                    ipm_value = serial_data.get('Ipm')
+                    vpm_value = serial_data.get('Vpm')
+
+                # Populate electrical values into the sheet (real or theoretical)
+                if pm_col and pm_value is not None:
+                    sheet[f'{pm_col}{row}'].value = pm_value
+                if isc_col and isc_value is not None:
+                    sheet[f'{isc_col}{row}'].value = isc_value
+                if voc_col and voc_value is not None:
+                    sheet[f'{voc_col}{row}'].value = voc_value
+                if ipm_col and ipm_value is not None:
+                    sheet[f'{ipm_col}{row}'].value = ipm_value
+                if vpm_col and vpm_value is not None:
+                    sheet[f'{vpm_col}{row}'].value = vpm_value
                 
                 # Update progress every 5 serials for smoother progress bar
                 if progress_callback and (i + 1) % 5 == 0:

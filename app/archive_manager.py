@@ -120,15 +120,24 @@ class ArchiveManager:
         """
         Clean up very old imported files from IMPORTED DATA directory.
         
+        This now prefers the IMPORTED DATA/RAW_IMPORTS/ subdirectory (new structure),
+        but will fall back to scanning the root IMPORTED DATA folder for backward
+        compatibility with older installs.
+        
         Args:
             max_age_days: Maximum age in days before cleanup (default: 180)
             
         Returns:
             Number of files cleaned up
         """
-        imported_dir = self.project_root / "IMPORTED DATA"
-        if not imported_dir.exists():
+        imported_root = self.project_root / "IMPORTED DATA"
+        if not imported_root.exists():
             return 0
+
+        # Prefer new RAW_IMPORTS layout if present; otherwise, use root folder
+        imported_dir = imported_root / "RAW_IMPORTS"
+        if not imported_dir.exists():
+            imported_dir = imported_root
         
         cutoff_date = datetime.now() - timedelta(days=max_age_days)
         cleaned_count = 0
@@ -138,7 +147,7 @@ class ArchiveManager:
                 if not file_path.is_file():
                     continue
                 
-                # Skip master data file
+                # Skip master data file when scanning legacy root layout
                 if file_path.name == 'sun_simulator_data.xlsx':
                     continue
                 
