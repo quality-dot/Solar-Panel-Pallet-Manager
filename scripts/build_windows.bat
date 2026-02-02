@@ -83,6 +83,12 @@ if errorlevel 1 (
 REM Update PyInstaller and hooks to latest versions
 echo Updating PyInstaller and hooks...
 python -m pip install -U pyinstaller pyinstaller-hooks-contrib
+if errorlevel 1 (
+    echo ERROR: Failed to install PyInstaller. Please install manually:
+    echo   python -m pip install pyinstaller pyinstaller-hooks-contrib
+    pause
+    exit /b 1
+)
 
 REM Check for SumatraPDF and download if missing
 echo.
@@ -112,6 +118,14 @@ if not exist "external_tools\SumatraPDF\SumatraPDF.exe" (
     echo.
 )
 
+REM Check if spec file exists
+if not exist "pallet_builder.spec" (
+    echo ERROR: pallet_builder.spec not found!
+    echo Please ensure the spec file exists in the project root.
+    pause
+    exit /b 1
+)
+
 REM Clean up old build artifacts to ensure fresh build
 echo.
 echo Cleaning old build artifacts...
@@ -124,7 +138,8 @@ echo Done cleaning!
 echo.
 
 REM Build with reduced logging for cleaner output
-python -m PyInstaller pallet_builder.spec --clean --noconfirm --distpath=. --log-level=INFO
+echo Building executable...
+python -m PyInstaller pallet_builder.spec --clean --noconfirm --log-level=INFO
 
 if errorlevel 1 (
     echo.

@@ -46,26 +46,49 @@ SetCompressorDictSize 32
 ; Installer sections
 Section "Main Application" SecMain
     SectionIn RO
-    
+
     ; Set output path
     SetOutPath "$INSTDIR"
-    
-    ; Check if exe exists
-    IfFileExists "dist\${APP_EXE}" 0 +3
-        File "dist\${APP_EXE}"
+
+    ; Check if exe exists in current directory
+    IfFileExists "${APP_EXE}" 0 +3
+        File "${APP_EXE}"
         Goto +2
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Error: ${APP_EXE} not found in dist folder. Please build the application first."
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Error: ${APP_EXE} not found. Please build the application first."
     Abort
-    
+
+    ; Create application directory structure
+    CreateDirectory "$INSTDIR\data"
+    CreateDirectory "$INSTDIR\assets"
+    CreateDirectory "$INSTDIR\docs"
+
+    ; Copy data directory (required for application to work)
+    DetailPrint "Installing application data files..."
+    File /r "data\*.*"
+
+    ; Copy assets
+    DetailPrint "Installing application assets..."
+    File /r "assets\*.*"
+
+    ; Copy documentation (optional but helpful)
+    DetailPrint "Installing documentation..."
+    File /r "docs\*.*"
+
+    ; Copy tools directory if it exists (for SumatraPDF)
+    IfFileExists "tools" 0 +4
+        CreateDirectory "$INSTDIR\tools"
+        DetailPrint "Installing external tools..."
+        File /r "tools\*.*"
+
     ; Create shortcuts
     CreateDirectory "$SMPROGRAMS\${APP_NAME}"
     CreateShortcut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
     CreateShortcut "$SMPROGRAMS\${APP_NAME}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
     CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
-    
+
     ; Write uninstaller
     WriteUninstaller "$INSTDIR\Uninstall.exe"
-    
+
     ; Write registry keys
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
         "DisplayName" "${APP_NAME}"
@@ -75,6 +98,8 @@ Section "Main Application" SecMain
         "Publisher" "${APP_PUBLISHER}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
         "DisplayVersion" "${APP_VERSION}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+        "InstallLocation" "$INSTDIR"
 SectionEnd
 
 Section "Start Menu Shortcut" SecStartMenu
@@ -94,20 +119,35 @@ SectionEnd
 
 ; Uninstaller
 Section "Uninstall"
-    ; Remove files
+    ; Remove main executable
     Delete "$INSTDIR\${APP_EXE}"
     Delete "$INSTDIR\Uninstall.exe"
-    
+
+    ; Remove data directory and all contents
+    RMDir /r "$INSTDIR\data"
+
+    ; Remove assets directory and all contents
+    RMDir /r "$INSTDIR\assets"
+
+    ; Remove docs directory and all contents
+    RMDir /r "$INSTDIR\docs"
+
+    ; Remove tools directory and all contents (if exists)
+    RMDir /r "$INSTDIR\tools"
+
+    ; Remove any remaining files in the install directory
+    Delete "$INSTDIR\*.*"
+
     ; Remove shortcuts
     Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
     Delete "$SMPROGRAMS\${APP_NAME}\Uninstall.lnk"
     RMDir "$SMPROGRAMS\${APP_NAME}"
     Delete "$DESKTOP\${APP_NAME}.lnk"
-    
+
     ; Remove registry keys
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
-    
-    ; Remove install directory
+
+    ; Remove install directory (only if empty)
     RMDir "$INSTDIR"
 SectionEnd
 
