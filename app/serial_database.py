@@ -786,25 +786,21 @@ class SerialDatabase:
                     pass
                 
                 if serial_normalized in existing_serials:
-                    # Check if new data is more recent than existing data
+                    # Always update existing records regardless of timestamp
                     row_num = existing_serials[serial_normalized]
-                    existing_date = ws.cell(row_num, 7).value  # Date column
-                    existing_ttime = ws.cell(row_num, 8).value  # TTime column
-                    
-                    # Only update if new data is more recent
-                    if self._compare_timestamps(date, ttime, existing_date, existing_ttime):
-                        ws.cell(row_num, 2, pm)  # Pm
-                        ws.cell(row_num, 3, isc)  # Isc
-                        ws.cell(row_num, 4, voc)  # Voc
-                        ws.cell(row_num, 5, ipm)  # Ipm
-                        ws.cell(row_num, 6, vpm)  # Vpm
-                        if date:
-                            ws.cell(row_num, 7, date)
-                        if ttime:
-                            ws.cell(row_num, 8, ttime)
-                        ws.cell(row_num, 10, now)  # Last Updated
-                        updated += 1
-                    # else: skip update - existing data is more recent
+
+                    # Update the record with new data
+                    ws.cell(row_num, 2, pm)  # Pm
+                    ws.cell(row_num, 3, isc)  # Isc
+                    ws.cell(row_num, 4, voc)  # Voc
+                    ws.cell(row_num, 5, ipm)  # Ipm
+                    ws.cell(row_num, 6, vpm)  # Vpm
+                    if date:
+                        ws.cell(row_num, 7, date)
+                    if ttime:
+                        ws.cell(row_num, 8, ttime)
+                    ws.cell(row_num, 10, now)  # Last Updated
+                    updated += 1
                 else:
                     # Add new row (use normalized serial for consistency)
                     ws.append([

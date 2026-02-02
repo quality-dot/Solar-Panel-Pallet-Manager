@@ -281,4 +281,3 @@ class FileMonitor:
             'exists': self.file_path.exists()
         }
 
-
