@@ -2831,9 +2831,9 @@ class PalletBuilderGUI:
                         from app.path_utils import get_base_dir, resolve_project_path
                         base_dir = get_base_dir()
                         import_sunsim.SCRIPT_DIR = base_dir
-                        import_sunsim.EXCEL_DIR = resolve_project_path("data/EXCEL", base_dir)
-                        import_sunsim.LOGS_DIR = resolve_project_path("data/LOGS", base_dir)
-                        import_sunsim.ARCHIVE_DIR = resolve_project_path("data/ARCHIVE/processed_files", base_dir)
+                        import_sunsim.EXCEL_DIR = resolve_project_path("data/EXCEL")
+                        import_sunsim.LOGS_DIR = resolve_project_path("data/LOGS")
+                        import_sunsim.ARCHIVE_DIR = resolve_project_path("data/ARCHIVE/processed_files")
 
                         # Create logger for validation
                         gui_logger = import_sunsim.setup_logging()
