@@ -26,6 +26,14 @@ if sumatra_path.exists():
 
 # Define hidden imports (modules that PyInstaller might miss)
 hiddenimports = [
+    # Standard library modules that PyInstaller sometimes misses
+    'secrets',  # Required by numpy.random
+    'hashlib',  # Required by various modules
+    'ssl',      # Required for network operations
+    'urllib.request',  # Required for downloads
+    'json',     # Required for JSON operations
+    'csv',      # Required for CSV operations
+    'xml.etree.ElementTree',  # Required by openpyxl
     # pandas and related
     'pandas',
     'pandas._libs.tslibs',
