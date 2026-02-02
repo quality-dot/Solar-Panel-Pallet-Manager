@@ -29,6 +29,12 @@ from app.serial_database import SerialDatabase
 from app.version import get_version, get_version_info
 from app.customer_manager import CustomerManager
 
+# Import for validation functions
+try:
+    from app import import_sunsim
+except ImportError:
+    import_sunsim = None
+
 
 def is_dark_mode():
     """Detect system dark mode on macOS or Windows (fast check with 0.1s timeout)"""
@@ -2817,14 +2823,47 @@ class PalletBuilderGUI:
                         )
                         return
                 
-                # Import the file (this is a blocking operation, but we update UI between files)
+                # Import the file with validation (same as command-line tool)
                 try:
-                    imported, updated, errors = self.serial_db.import_simulator_file(import_file)
+                    # First parse and validate records like the command-line tool does
+                    if import_sunsim:
+                        if import_file.suffix.lower() == '.csv':
+                            records = import_sunsim.parse_csv_file(import_file, None)
+                        else:
+                            records = import_sunsim.parse_xlsx_file(import_file, None)
+
+                        if not records:
+                            failed_files.append((import_file.name, "No records parsed from file"))
+                            continue
+
+                        # Validate records (same as command-line tool)
+                        valid_records = []
+                        for record_idx, record in enumerate(records, 1):
+                            is_valid, warnings = import_sunsim.validate_record(
+                                record, None, row_num=record_idx, verbose=False, exclude_out_of_range=False
+                            )
+                            if is_valid:
+                                valid_records.append(record)
+
+                        if not valid_records:
+                            failed_files.append((import_file.name, "No valid records found after validation"))
+                            continue
+
+                        # Deduplicate records
+                        file_mtime = import_file.stat().st_mtime
+                        deduplicated = import_sunsim.deduplicate_records(valid_records, file_mtime, None)
+
+                        # Import the validated, deduplicated records
+                        imported, updated, errors = self.serial_db.import_simulator_file_validated(deduplicated, import_file)
+                    else:
+                        # Fallback to original method if import_sunsim not available
+                        imported, updated, errors = self.serial_db.import_simulator_file(import_file)
+
                     total_imported += imported
                     total_updated += updated
                     all_errors.extend(errors)
                     successful_files.append((import_file.name, imported, updated))
-                    
+
                     # Lightweight UI update every 3 files (reduce CPU usage by ~67%)
                     if idx % 3 == 0:
                         self.root.update_idletasks()

@@ -837,7 +837,80 @@ class SerialDatabase:
             traceback.print_exc()
         
         return imported, updated, errors
-    
+
+    def import_simulator_file_validated(self, records_dict: Dict[str, Dict], source_file: Path) -> Tuple[int, int, list]:
+        """
+        Import pre-validated and deduplicated records from simulator export.
+        This bypasses file parsing and validation, assuming records are already clean.
+        Used by GUI import process after validation.
+
+        Args:
+            records_dict: Dictionary mapping serial numbers to record dictionaries
+            source_file: Path to the source file for master data sheet updates
+
+        Returns:
+            (imported_count, updated_count, errors_list)
+        """
+        imported = 0
+        updated = 0
+        errors = []
+
+        try:
+            # Load existing database
+            wb = load_workbook(self.db_file, read_only=False)
+            ws = wb['SerialNos']
+
+            # Get existing SerialNos
+            existing_serials = {}
+            for row in ws.iter_rows(min_row=2):
+                if row[0].value:
+                    serial_normalized = normalize_serial(row[0].value)
+                    if serial_normalized:
+                        existing_serials[serial_normalized] = row[0].row
+
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # Process each record
+            for serial_no, record in records_dict.items():
+                if serial_no in existing_serials:
+                    # Always update existing records regardless of timestamp
+                    row_num = existing_serials[serial_no]
+                    ws.cell(row_num, 2, record.get('Pm'))   # Pm
+                    ws.cell(row_num, 3, record.get('Isc'))  # Isc
+                    ws.cell(row_num, 4, record.get('Voc'))  # Voc
+                    ws.cell(row_num, 5, record.get('Ipm'))  # Ipm
+                    ws.cell(row_num, 6, record.get('Vpm'))  # Vpm
+                    if record.get('Date'):
+                        ws.cell(row_num, 7, record.get('Date'))
+                    if record.get('TTime'):
+                        ws.cell(row_num, 8, record.get('TTime'))
+                    ws.cell(row_num, 10, now)  # Last Updated
+                    updated += 1
+                else:
+                    # Add new row
+                    ws.append([
+                        serial_no,
+                        record.get('Pm'), record.get('Isc'), record.get('Voc'),
+                        record.get('Ipm'), record.get('Vpm'),
+                        record.get('Date'), record.get('TTime'), now, now
+                    ])
+                    imported += 1
+
+            # Save database
+            wb.save(self.db_file)
+            wb.close()
+
+            # Update master sheet and move file
+            if imported > 0 or updated > 0:
+                self._update_master_data_sheet(source_file, pd.DataFrame(list(records_dict.values())))
+                self._move_to_imported_data(source_file)
+                self.invalidate_cache()
+
+        except Exception as e:
+            errors.append(f"Error importing validated records: {e}")
+
+        return imported, updated, errors
+
     def _parse_timestamp(self, date_val, ttime_val) -> Optional[datetime]:
         """
         Parse Date and TTime into a datetime object for comparison.
