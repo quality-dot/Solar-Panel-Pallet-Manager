@@ -2827,10 +2827,21 @@ class PalletBuilderGUI:
                 try:
                     # First parse and validate records like the command-line tool does
                     if import_sunsim:
+                        # Set up logging paths (same as tool_runner.py)
+                        from app.path_utils import get_base_dir, resolve_project_path
+                        base_dir = get_base_dir()
+                        import_sunsim.SCRIPT_DIR = base_dir
+                        import_sunsim.EXCEL_DIR = resolve_project_path("data/EXCEL", base_dir)
+                        import_sunsim.LOGS_DIR = resolve_project_path("data/LOGS", base_dir)
+                        import_sunsim.ARCHIVE_DIR = resolve_project_path("data/ARCHIVE/processed_files", base_dir)
+
+                        # Create logger for validation
+                        gui_logger = import_sunsim.setup_logging()
+
                         if import_file.suffix.lower() == '.csv':
-                            records = import_sunsim.parse_csv_file(import_file, None)
+                            records = import_sunsim.parse_csv_file(import_file, gui_logger)
                         else:
-                            records = import_sunsim.parse_xlsx_file(import_file, None)
+                            records = import_sunsim.parse_xlsx_file(import_file, gui_logger)
 
                         if not records:
                             failed_files.append((import_file.name, "No records parsed from file"))
@@ -2840,7 +2851,7 @@ class PalletBuilderGUI:
                         valid_records = []
                         for record_idx, record in enumerate(records, 1):
                             is_valid, warnings = import_sunsim.validate_record(
-                                record, None, row_num=record_idx, verbose=False, exclude_out_of_range=False
+                                record, gui_logger, row_num=record_idx, verbose=False, exclude_out_of_range=False
                             )
                             if is_valid:
                                 valid_records.append(record)
@@ -2851,7 +2862,7 @@ class PalletBuilderGUI:
 
                         # Deduplicate records
                         file_mtime = import_file.stat().st_mtime
-                        deduplicated = import_sunsim.deduplicate_records(valid_records, file_mtime, None)
+                        deduplicated = import_sunsim.deduplicate_records(valid_records, file_mtime, gui_logger)
 
                         # Import the validated, deduplicated records
                         imported, updated, errors = self.serial_db.import_simulator_file_validated(deduplicated, import_file)
