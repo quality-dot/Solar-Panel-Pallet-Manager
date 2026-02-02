@@ -5,7 +5,8 @@ import sys
 from pathlib import Path
 
 # Get the project root directory
-project_root = Path(__file__).parent
+# Use current working directory since build script cd's to project root
+project_root = Path.cwd()
 
 # Define data files to include
 datas = [
