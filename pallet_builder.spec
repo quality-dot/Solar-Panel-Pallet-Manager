@@ -34,6 +34,14 @@ hiddenimports = [
     'json',     # Required for JSON operations
     'csv',      # Required for CSV operations
     'xml.etree.ElementTree',  # Required by openpyxl
+    'email',    # Required by reportlab for PDF generation
+    'email.utils',  # Required by reportlab
+    'email.header',  # Required by reportlab
+    'email.mime',   # Required by reportlab
+    'smtplib',      # Required for email operations
+    'imaplib',      # Required for email operations
+    'calendar',     # Required by reportlab
+    'gzip',         # Required for compressed operations
     # pandas and related
     'pandas',
     'pandas._libs.tslibs',
