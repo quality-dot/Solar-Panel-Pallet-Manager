@@ -38,10 +38,19 @@ hiddenimports = [
     'email.utils',  # Required by reportlab
     'email.header',  # Required by reportlab
     'email.mime',   # Required by reportlab
+    'email.message',  # Required by reportlab
+    'email.parser',  # Required by reportlab
+    'email.generator',  # Required by reportlab
+    'email.encoders',  # Required by reportlab
+    'email.base64mime',  # Required by reportlab
+    'email.quoprimime',  # Required by reportlab
     'smtplib',      # Required for email operations
     'imaplib',      # Required for email operations
     'calendar',     # Required by reportlab
     'gzip',         # Required for compressed operations
+    'base64',       # Required by reportlab for encoding
+    'uu',           # Required by reportlab for encoding
+    'binascii',     # Required by reportlab for binary operations
     # pandas and related
     'pandas',
     'pandas._libs.tslibs',
@@ -111,7 +120,8 @@ excludes = [
     'notebook',
     'setuptools',
     'distutils',
-    'email',
+    # Don't exclude email anymore since reportlab needs it
+    # 'email',
     'http',
     'urllib3',
     'xmlrpc',
