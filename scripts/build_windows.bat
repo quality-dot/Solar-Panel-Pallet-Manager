@@ -137,9 +137,15 @@ if exist "app\__pycache__" rmdir /s /q "app\__pycache__"
 echo Done cleaning!
 echo.
 
-REM Build with reduced logging for cleaner output
-echo Building executable...
-python -m PyInstaller pallet_builder.spec --clean --noconfirm --log-level=INFO
+REM Try building without spec file first to isolate the issue
+echo Building executable without spec file...
+python -m PyInstaller launch_app.py --onefile --windowed --name="Pallet Manager" --hidden-import=http --hidden-import=http.client --hidden-import=http.server --hidden-import=http.cookies --hidden-import=http.cookiejar --hidden-import=urllib --hidden-import=urllib.parse --hidden-import=urllib.error --hidden-import=socket --hidden-import=email --hidden-import=email.utils --hidden-import=email.header --hidden-import=email.mime --hidden-import=secrets --hidden-import=ssl --hidden-import=urllib.request --clean --noconfirm --log-level=INFO
+
+if errorlevel 1 (
+    echo.
+    echo Basic build failed, trying with spec file...
+    python -m PyInstaller pallet_builder.spec --clean --noconfirm --log-level=INFO --hidden-import=http --hidden-import=http.client --hidden-import=http.server --hidden-import=http.cookies --hidden-import=http.cookiejar --hidden-import=urllib --hidden-import=urllib.parse --hidden-import=urllib.error --hidden-import=socket
+)
 
 if errorlevel 1 (
     echo.
