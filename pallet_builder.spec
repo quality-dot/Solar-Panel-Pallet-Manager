@@ -146,8 +146,12 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
-    hookspath=[],
-    hooksconfig={},
+    hookspath=['.'],  # Look for hooks in current directory
+    hooksconfig={
+        'reportlab': {
+            'matplotlib': False,  # Don't use matplotlib backend
+        }
+    },
     runtime_hooks=[],
     excludes=excludes,
     win_no_prefer_redirects=False,
