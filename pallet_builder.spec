@@ -51,6 +51,65 @@ hiddenimports = [
     'base64',       # Required by reportlab for encoding
     'uu',           # Required by reportlab for encoding
     'binascii',     # Required by reportlab for binary operations
+    # HTTP and network modules
+    'http',
+    'http.client',
+    'http.server',
+    'http.cookies',
+    'http.cookiejar',
+    'urllib',
+    'urllib.parse',
+    'urllib.error',
+    'socket',
+    'select',
+    # Core system modules
+    'threading',
+    'multiprocessing',
+    'subprocess',
+    'tempfile',
+    'shutil',
+    'glob',
+    'fnmatch',
+    'linecache',
+    'tokenize',
+    'keyword',
+    'ast',
+    'inspect',
+    'dis',
+    'opcode',
+    'copyreg',
+    'copy',
+    'pprint',
+    'reprlib',
+    'enum',
+    'numbers',
+    'math',
+    'cmath',
+    'decimal',
+    'fractions',
+    'random',
+    'statistics',
+    # Collections and utilities
+    'collections',
+    'collections.abc',
+    'functools',
+    'operator',
+    'itertools',
+    'contextlib',
+    'warnings',
+    'weakref',
+    'gc',
+    # System and platform modules
+    'sys',
+    'builtins',
+    'types',
+    'platform',
+    'errno',
+    'ctypes',
+    # Platform-specific modules
+    'msvcrt',  # Windows-specific
+    'nt',      # Windows-specific
+    'posix',   # Unix-specific
     # pandas and related
     'pandas',
     'pandas._libs.tslibs',
@@ -146,12 +205,7 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
-    hookspath=['.'],  # Look for hooks in current directory
-    hooksconfig={
-        'reportlab': {
-            'matplotlib': False,  # Don't use matplotlib backend
-        }
-    },
+    hookspath=[],  # Don't use custom hooks - using direct hiddenimports instead
     runtime_hooks=[],
     excludes=excludes,
     win_no_prefer_redirects=False,
