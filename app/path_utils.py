@@ -280,4 +280,3 @@ class FileMonitor:
             'change_count': self.change_count,
             'exists': self.file_path.exists()
         }
-

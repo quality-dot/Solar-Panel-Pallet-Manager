@@ -74,7 +74,8 @@ class PalletHistoryWindow:
             self.window.geometry("1200x900+50+50")
         
         self.selected_pallet: Optional[dict] = None
-        self.checkbox_states: dict = {}  # Track checkbox states for each pallet
+        self.checkbox_states: dict = {}  # Track checkbox states by tree item id
+        self.item_to_pallet: dict = {}  # Map tree item id -> pallet record
         
         self.setup_ui()
         self.load_history()
@@ -342,8 +343,8 @@ class PalletHistoryWindow:
                     matching_pallets = []
                     for pallet in pallets:
                         serials = pallet.get('serial_numbers', [])
-                        # Check if any serial number contains the search term (case-insensitive)
-                        if any(search_term in str(serial).upper() for serial in serials):
+                        # Exact serial match only (case-insensitive) to avoid false positives.
+                        if any(search_term == str(serial).strip().upper() for serial in serials):
                             matching_pallets.append(pallet)
                     pallets = matching_pallets
                 
@@ -444,6 +445,7 @@ class PalletHistoryWindow:
         
         # Clear checkbox states for new data
         self.checkbox_states = {}
+        self.item_to_pallet = {}
         self.header_select_all = False  # Reset header checkbox
         if hasattr(self, 'select_all_var'):
             self.select_all_var.set(False)  # Reset select all
@@ -470,12 +472,14 @@ class PalletHistoryWindow:
                 if pallet.get('reset', False):
                     file_name = f"[RESET] {file_name}"
                 
-                # Initialize checkbox state (unchecked by default)
-                self.checkbox_states[pallet_num] = False
-                
                 # Insert with checkbox column (empty checkbox symbol) and tags for selection highlighting
-                self.tree.insert("", tk.END, values=("☐", pallet_num, completed, file_name), 
-                               tags=(str(pallet_num), "unselected"))
+                item_id = self.tree.insert(
+                    "", tk.END,
+                    values=("☐", pallet_num, completed, file_name),
+                    tags=(str(pallet_num), "unselected")
+                )
+                self.checkbox_states[item_id] = False
+                self.item_to_pallet[item_id] = pallet
             
             current_index[0] = end_index
             
@@ -493,9 +497,7 @@ class PalletHistoryWindow:
             return
 
         values = list(self.tree.item(item, 'values'))
-        pallet_num = values[1] if len(values) > 1 else None
-
-        if not pallet_num:
+        if len(values) <= 1:
             return
 
         # Get column clicked
@@ -505,12 +507,12 @@ class PalletHistoryWindow:
         # Only handle checkbox column clicks (column 0)
         if column_index == 0:
             # Toggle checkbox state (independent of other checkboxes)
-            current_state = self.checkbox_states.get(pallet_num, False)
+            current_state = self.checkbox_states.get(item, False)
             new_state = not current_state
-            self.checkbox_states[pallet_num] = new_state
+            self.checkbox_states[item] = new_state
 
             # Update checkbox display
-            self._update_checkbox_display(item, pallet_num)
+            self._update_checkbox_display(item)
 
             # Sync Treeview selection with checkbox state
             if new_state:
@@ -535,11 +537,8 @@ class PalletHistoryWindow:
         
         # Update all checkbox states - only this one is checked
         for child in self.tree.get_children():
-            child_values = list(self.tree.item(child, 'values'))
-            child_pallet_num = child_values[1] if len(child_values) > 1 else None
-            if child_pallet_num:
-                self.checkbox_states[child_pallet_num] = (child_pallet_num == pallet_num)
-                self._update_checkbox_display(child, child_pallet_num)
+            self.checkbox_states[child] = (child == item)
+            self._update_checkbox_display(child)
     
     def _sync_checkbox_with_selection(self):
         """Sync checkbox states with Treeview selection"""
@@ -547,23 +546,20 @@ class PalletHistoryWindow:
         
         # Update checkbox states based on selection
         for child in self.tree.get_children():
-            child_values = list(self.tree.item(child, 'values'))
-            child_pallet_num = child_values[1] if len(child_values) > 1 else None
-            if child_pallet_num:
-                is_selected = child in selected_items
-                self.checkbox_states[child_pallet_num] = is_selected
-                self._update_checkbox_display(child, child_pallet_num)
+            is_selected = child in selected_items
+            self.checkbox_states[child] = is_selected
+            self._update_checkbox_display(child)
         
         # Update select all checkbox state
         self._update_select_all_state()
     
-    def _update_checkbox_display(self, item, pallet_num):
+    def _update_checkbox_display(self, item):
         """Update checkbox display for a specific item and sync visual highlighting"""
         try:
             values = list(self.tree.item(item, 'values'))
             if len(values) > 0:
                 # Update checkbox symbol
-                is_checked = self.checkbox_states.get(pallet_num, False)
+                is_checked = self.checkbox_states.get(item, False)
                 values[0] = "☑" if is_checked else "☐"
                 self.tree.item(item, values=values)
                 
@@ -580,24 +576,9 @@ class PalletHistoryWindow:
         except Exception as e:
             print(f"DEBUG: Error updating checkbox: {e}")  # Debug output
     
-    def _show_pallet_details(self, pallet_num):
+    def _show_pallet_details(self, item_id):
         """Show details for a pallet (deferred to avoid lag)"""
-        # Find pallet in history (use cached data directly)
-        pallets = self.pallet_manager.data.get('pallets', [])
-        # Find all pallets with this number, then select the most recent one (by completed_at)
-        matching_pallets = [
-            p for p in pallets if str(p.get('pallet_number', '')) == str(pallet_num)
-        ]
-
-        if matching_pallets:
-            # Sort by completed_at descending (most recent first)
-            matching_pallets.sort(
-                key=lambda p: p.get('completed_at', ''),
-                reverse=True
-            )
-            self.selected_pallet = matching_pallets[0]  # Most recent
-        else:
-            self.selected_pallet = None
+        self.selected_pallet = self.item_to_pallet.get(item_id)
         
         if self.selected_pallet:
             self.update_details()
@@ -613,12 +594,12 @@ class PalletHistoryWindow:
             self.details_text.insert(1.0, "No pallet selected.\n\nClick on a pallet row to view details.")
         elif selected_count == 1:
             # Exactly one selected - show its details
-            selected_pallet_nums = [
-                pallet_num for pallet_num, checked in self.checkbox_states.items() 
+            selected_items = [
+                item_id for item_id, checked in self.checkbox_states.items()
                 if checked
             ]
-            if selected_pallet_nums:
-                self._show_pallet_details(selected_pallet_nums[0])
+            if selected_items:
+                self._show_pallet_details(selected_items[0])
         else:
             # Multiple selected - show summary
             self.selected_pallet = None
@@ -666,11 +647,8 @@ class PalletHistoryWindow:
         
         # Update checkbox states and display
         for item in self.tree.get_children():
-            values = list(self.tree.item(item, 'values'))
-            if len(values) > 1:
-                pallet_num = values[1]
-                self.checkbox_states[pallet_num] = checked
-                self._update_checkbox_display(item, pallet_num)
+            self.checkbox_states[item] = checked
+            self._update_checkbox_display(item)
         
         # Update details panel based on new selection
         self._update_details_for_selection()
@@ -687,10 +665,7 @@ class PalletHistoryWindow:
             return
         
         all_checked = all(
-            self.checkbox_states.get(
-                list(self.tree.item(item, 'values'))[1] if len(self.tree.item(item, 'values')) > 1 else None,
-                False
-            )
+            self.checkbox_states.get(item, False)
             for item in all_items
         )
         
@@ -1001,7 +976,7 @@ class PalletHistoryWindow:
         """Get list of selected pallet dicts from checkbox states"""
         # Get selected pallet numbers from checkbox states
         selected_pallet_nums = [
-            pallet_num for pallet_num, checked in self.checkbox_states.items() 
+            item_id for item_id, checked in self.checkbox_states.items()
             if checked
         ]
         
@@ -1009,24 +984,10 @@ class PalletHistoryWindow:
             return []
         
         selected_pallets = []
-        # Use cached data directly instead of calling get_history()
-        all_pallets = self.pallet_manager.data.get('pallets', [])
-        
-        for pallet_num in selected_pallet_nums:
-            # Handle both string and int comparisons (pallet_num from tree might be string)
-            # Find all pallets with this number, then select the most recent one
-            matching_pallets = [
-                p for p in all_pallets
-                if str(p.get('pallet_number', '')) == str(pallet_num)
-            ]
-
-            if matching_pallets:
-                # Sort by completed_at descending (most recent first)
-                matching_pallets.sort(
-                    key=lambda p: p.get('completed_at', ''),
-                    reverse=True
-                )
-                selected_pallets.append(matching_pallets[0])  # Most recent
+        for item_id in selected_pallet_nums:
+            pallet = self.item_to_pallet.get(item_id)
+            if pallet:
+                selected_pallets.append(pallet)
         
         print(f"DEBUG: Selected pallets: {len(selected_pallets)}")  # Debug output
         return selected_pallets
@@ -2047,26 +2008,20 @@ class PalletHistoryWindow:
     def _auto_select_single_pallet(self, pallet):
         """Automatically select a pallet when search narrows down to one result"""
         try:
-            pallet_num = pallet.get('pallet_number')
-            if not pallet_num:
-                return
-            
             # Find the tree item for this pallet
             for item in self.tree.get_children():
-                values = list(self.tree.item(item, 'values'))
-                if len(values) > 1 and str(values[1]) == str(pallet_num):
+                if self.item_to_pallet.get(item) is pallet:
                     # Select this item (Windows File Explorer style)
                     self.tree.selection_set(item)
                     self.tree.focus(item)
                     self.tree.see(item)  # Scroll into view
                     
                     # Update checkbox state
-                    self.checkbox_states[pallet_num] = True
-                    self._update_checkbox_display(item, pallet_num)
+                    self.checkbox_states[item] = True
+                    self._update_checkbox_display(item)
                     
                     # Show details
-                    self._show_pallet_details(pallet_num)
+                    self._show_pallet_details(item)
                     break
         except Exception as e:
             print(f"DEBUG: Error auto-selecting pallet: {e}")
-

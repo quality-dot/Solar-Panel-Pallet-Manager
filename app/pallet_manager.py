@@ -36,6 +36,35 @@ class PalletManager:
             self.data = self._get_default_structure()
         else:
             self.data = self.load_history()
+        self._history_mtime = self._get_history_mtime()
+
+    def _get_history_mtime(self) -> Optional[float]:
+        """Get current history file modification time, if available."""
+        try:
+            if self.history_file.exists():
+                return self.history_file.stat().st_mtime
+        except Exception:
+            pass
+        return None
+
+    def _refresh_from_disk_if_changed(self):
+        """
+        Refresh in-memory history if the underlying file changed externally.
+
+        This prevents stale duplicate checks when another process or background
+        task modifies pallet_history.json.
+        """
+        current_mtime = self._get_history_mtime()
+        if current_mtime is None:
+            return
+
+        if self._history_mtime is None:
+            self._history_mtime = current_mtime
+            return
+
+        if current_mtime > self._history_mtime:
+            self.data = self.load_history()
+            self._history_mtime = current_mtime
     
     def _ensure_directory_structure(self):
         """Ensure PALLETS directory exists"""
@@ -75,6 +104,7 @@ class PalletManager:
             if 'pallets' not in data or 'next_pallet_number' not in data:
                 return self._get_default_structure()
             
+            self._history_mtime = self._get_history_mtime()
             return data
             
         except json.JSONDecodeError:
@@ -85,10 +115,12 @@ class PalletManager:
             except Exception:
                 pass  # If backup fails, continue anyway
             
+            self._history_mtime = self._get_history_mtime()
             return self._get_default_structure()
             
         except Exception as e:
             # Any other error (permissions, etc.) - return default
+            self._history_mtime = self._get_history_mtime()
             return self._get_default_structure()
     
     def _get_default_structure(self) -> Dict[str, Any]:
@@ -117,6 +149,7 @@ class PalletManager:
             
             # Atomic rename (works on both Windows and Unix)
             temp_file.replace(self.history_file)
+            self._history_mtime = self._get_history_mtime()
             
             return True
             
@@ -219,6 +252,10 @@ class PalletManager:
             Dict with pallet info if found, None otherwise
             Format: {'pallet_number': int, 'completed_at': str or None, 'is_current': bool}
         """
+        # Keep in-memory state aligned with on-disk history to avoid false
+        # duplicate hits after background/external file updates.
+        self._refresh_from_disk_if_changed()
+
         # Normalize serial for case-insensitive comparison
         from app.serial_database import normalize_serial
         normalized_serial = normalize_serial(serial)
@@ -231,10 +268,13 @@ class PalletManager:
                 'is_current': True
             }
         
-        # Check all completed pallets in history (skip reset pallets)
+        # Check all completed pallets in history.
+        # Skip reset pallets and stale records whose export file no longer exists.
         for pallet in self.data.get("pallets", []):
             if pallet.get("reset", False):
                 continue  # Skip reset pallets - their serials can be reused
+            if not self._is_pallet_record_usable_for_duplicate_check(pallet):
+                continue
             if normalized_serial in pallet.get("serial_numbers", []):
                 return {
                     'pallet_number': pallet.get("pallet_number"),
@@ -243,6 +283,45 @@ class PalletManager:
                 }
         
         return None
+
+    def _is_pallet_record_usable_for_duplicate_check(self, pallet: Dict[str, Any]) -> bool:
+        """
+        Return True if this history record should block duplicate scans.
+
+        Pallets with missing exported files are treated as non-blocking because
+        operators cannot verify/open them in History and these stale records can
+        cause false "already on pallet" alerts.
+        """
+        exported_file = pallet.get("exported_file")
+        if not exported_file:
+            return True
+
+        try:
+            file_path = Path(exported_file)
+            if file_path.is_absolute():
+                return file_path.exists()
+
+            # Match pallet_history_window behavior for relative paths.
+            from app.path_utils import get_base_dir
+            pallets_dir = get_base_dir() / "PALLETS"
+
+            full_path = pallets_dir / file_path
+            if full_path.exists():
+                return True
+
+            filename_only = file_path.name
+            if (pallets_dir / filename_only).exists():
+                return True
+
+            if pallets_dir.exists():
+                for date_dir in pallets_dir.iterdir():
+                    if date_dir.is_dir() and (date_dir / filename_only).exists():
+                        return True
+        except Exception:
+            # If we can't validate the path, do not hard-block scanning.
+            return False
+
+        return False
     
     def complete_pallet(self, pallet: Dict[str, Any], exported_file: Path, export_datetime: Optional[datetime] = None) -> bool:
         """
@@ -351,4 +430,3 @@ class PalletManager:
         pallets.sort(key=lambda x: x.get("pallet_number", 0), reverse=True)
         
         return pallets
-
