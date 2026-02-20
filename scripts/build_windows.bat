@@ -7,11 +7,17 @@ cd /d "%~dp0.."
 echo Building Pallet Manager for Windows...
 echo.
 
-REM Install all required dependencies automatically
-echo Installing required dependencies...
-echo.
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -U openpyxl pandas reportlab jinja2 Pillow pywin32 PyPDF2
+REM Check Python availability early
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Python not found on PATH.
+    echo Install Python and ensure "python" command is available.
+    pause
+    exit /b 1
+)
+
+REM Install dependencies only if missing (avoid repeated upgrades/churn)
+echo Checking required dependencies...
 echo.
 
 REM Check if openpyxl is installed (REQUIRED - Excel operations)
@@ -80,14 +86,44 @@ if errorlevel 1 (
     )
 )
 
-REM Update PyInstaller and hooks to latest versions
-echo Updating PyInstaller and hooks...
-python -m pip install -U pyinstaller pyinstaller-hooks-contrib
+REM Check if pywin32 is installed (REQUIRED - Windows integrations)
+python -c "import win32com" 2>nul
 if errorlevel 1 (
-    echo ERROR: Failed to install PyInstaller. Please install manually:
-    echo   python -m pip install pyinstaller pyinstaller-hooks-contrib
-    pause
-    exit /b 1
+    echo Installing pywin32...
+    python -m pip install pywin32
+    if errorlevel 1 (
+        echo ERROR: Failed to install pywin32. Please install manually:
+        echo   python -m pip install pywin32
+        pause
+        exit /b 1
+    )
+)
+
+REM Check if PyPDF2 is installed (REQUIRED - PDF handling)
+python -c "import PyPDF2" 2>nul
+if errorlevel 1 (
+    echo Installing PyPDF2...
+    python -m pip install PyPDF2
+    if errorlevel 1 (
+        echo ERROR: Failed to install PyPDF2. Please install manually:
+        echo   python -m pip install PyPDF2
+        pause
+        exit /b 1
+    )
+)
+
+REM Check if PyInstaller is installed
+echo Checking PyInstaller...
+python -c "import PyInstaller" 2>nul
+if errorlevel 1 (
+    echo Installing PyInstaller and hooks...
+    python -m pip install pyinstaller pyinstaller-hooks-contrib
+    if errorlevel 1 (
+        echo ERROR: Failed to install PyInstaller. Please install manually:
+        echo   python -m pip install pyinstaller pyinstaller-hooks-contrib
+        pause
+        exit /b 1
+    )
 )
 
 REM Check for SumatraPDF and download if missing
@@ -107,7 +143,7 @@ if not exist "external_tools\SumatraPDF\SumatraPDF.exe" (
         echo.
         echo To enable automatic print dialog:
         echo 1. Download from: https://www.sumatrapdfreader.org/download-free-pdf-viewer
-        echo 2. Download the 64-bit portable version ^(SumatraPDF-3.5.2-64.zip^)
+        echo 2. Download the latest 64-bit portable ZIP
         echo 3. Extract and place SumatraPDF.exe in: external_tools\SumatraPDF\
         echo 4. Rebuild
         echo.
@@ -159,5 +195,4 @@ echo Build Complete!
 echo Executable: Pallet Manager.exe
 echo.
 pause
-
 
