@@ -102,6 +102,7 @@ IMPORTED DATA/*.xlsm
 IMPORTED DATA/*.xls
 IMPORTED DATA/*.xlsb
 IMPORTED DATA/*.csv
+IMPORTED DATA/**
 !IMPORTED DATA/.gitkeep
 LOGS/*.log
 !LOGS/.gitkeep
